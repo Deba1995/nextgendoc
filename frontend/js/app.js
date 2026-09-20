@@ -97,6 +97,43 @@ const els = {
   warningsList: document.getElementById("warnings-list"),
   btnDownloadZip: document.getElementById("btn-download-zip"),
   filesTableBody: document.getElementById("files-table-body"),
+  btnProceedStep4: document.getElementById("btn-proceed-step4"),
+
+  // Dropdown menus
+  btnToggleDemoMenu: document.getElementById("btn-toggle-demo-menu"),
+  demoMenuDropdown: document.getElementById("demo-menu-dropdown"),
+  btnToggleProjectMenu: document.getElementById("btn-toggle-project-menu"),
+  projectMenuDropdown: document.getElementById("project-menu-dropdown"),
+
+  // Step 4: Email Dispatch
+  smtpHost: document.getElementById("smtp-host"),
+  smtpPort: document.getElementById("smtp-port"),
+  smtpTls: document.getElementById("smtp-tls"),
+  smtpSsl: document.getElementById("smtp-ssl"),
+  smtpSenderName: document.getElementById("smtp-sender-name"),
+  smtpUsername: document.getElementById("smtp-username"),
+  smtpPassword: document.getElementById("smtp-password"),
+  btnSmtpTest: document.getElementById("btn-smtp-test"),
+  smtpTestStatus: document.getElementById("smtp-test-status"),
+  smtpPresets: document.querySelectorAll(".btn-smtp-preset"),
+  emailTestMode: document.getElementById("email-test-mode"),
+  emailTestAddress: document.getElementById("email-test-address"),
+  testModeContainer: document.getElementById("test-mode-container"),
+  emailColumnSelect: document.getElementById("email-column-select"),
+  emailSubject: document.getElementById("email-subject"),
+  emailBody: document.getElementById("email-body"),
+  emailTokenChips: document.getElementById("email-token-chips"),
+  emailDelaySelect: document.getElementById("email-delay-select"),
+  btnStartEmail: document.getElementById("btn-start-email"),
+  btnCancelEmail: document.getElementById("btn-cancel-email"),
+  emailProgressSection: document.getElementById("email-progress-section"),
+  emailProgressFill: document.getElementById("email-progress-fill"),
+  emailProgressPercent: document.getElementById("email-progress-percent"),
+  emailStatProcessed: document.getElementById("email-stat-processed"),
+  emailStatTotal: document.getElementById("email-stat-total"),
+  emailStatSuccess: document.getElementById("email-stat-success"),
+  emailStatFailed: document.getElementById("email-stat-failed"),
+  emailLogsBody: document.getElementById("email-logs-body"),
 
   // Toast & Modals
   toastContainer: document.getElementById("toast-container"),
@@ -116,6 +153,7 @@ function init() {
   initEditorStep();
   initInspector();
   initGenerateStep();
+  initEmailStep();
   initModals();
 
   // Subscribe to state changes
@@ -176,6 +214,10 @@ function initNavigation() {
         showToast("Please place at least one field on the canvas before generating.", "warning");
         return;
       }
+      if (step === 4 && !state.activeJobId) {
+        showToast("Please generate certificates in Step 3 first before dispatching emails.", "warning");
+        return;
+      }
       state.setStep(step);
     });
   });
@@ -195,6 +237,34 @@ function initNavigation() {
     }
     state.setStep(3);
   });
+
+  if (els.btnProceedStep4) {
+    els.btnProceedStep4.addEventListener("click", () => {
+      state.setStep(4);
+    });
+  }
+
+  // Dropdown toggles
+  if (els.btnToggleDemoMenu && els.demoMenuDropdown) {
+    els.btnToggleDemoMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      els.demoMenuDropdown.classList.toggle("show");
+      els.projectMenuDropdown?.classList.remove("show");
+    });
+  }
+
+  if (els.btnToggleProjectMenu && els.projectMenuDropdown) {
+    els.btnToggleProjectMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      els.projectMenuDropdown.classList.toggle("show");
+      els.demoMenuDropdown?.classList.remove("show");
+    });
+  }
+
+  document.addEventListener("click", () => {
+    els.demoMenuDropdown?.classList.remove("show");
+    els.projectMenuDropdown?.classList.remove("show");
+  });
 }
 
 function updateStepUI(step) {
@@ -204,7 +274,8 @@ function updateStepUI(step) {
   els.views.forEach((v) => {
     v.classList.remove("active");
   });
-  const currentView = document.getElementById(`view-${step === 1 ? "upload" : step === 2 ? "editor" : "generate"}`);
+  const viewMap = { 1: "upload", 2: "editor", 3: "generate", 4: "email" };
+  const currentView = document.getElementById(`view-${viewMap[step] || "upload"}`);
   if (currentView) currentView.classList.add("active");
 
   if (step === 2) {
@@ -212,6 +283,8 @@ function updateStepUI(step) {
     setTimeout(() => canvasEditor.render(), 100);
   } else if (step === 3) {
     setupGenerateView();
+  } else if (step === 4) {
+    setupEmailView();
   }
 }
 
@@ -1011,9 +1084,16 @@ function pollJobProgress(jobId) {
 }
 
 function setupCompletedJob(jobId, job) {
+  state.activeJobId = jobId;
+
   // Setup ZIP download button
   els.btnDownloadZip.style.display = "inline-flex";
   els.btnDownloadZip.href = `/api/jobs/${jobId}/download-zip`;
+
+  // Show Proceed to Step 4 button
+  if (els.btnProceedStep4) {
+    els.btnProceedStep4.style.display = "inline-flex";
+  }
 
   // Render generated files table
   els.filesTableBody.innerHTML = "";
@@ -1103,6 +1183,447 @@ function renderProjectsList(projects) {
 
     els.modalProjectsList.appendChild(item);
   });
+}
+
+// =============================================================================
+// STEP 4: EMAIL DISPATCH CONTROLLER & TEST MODE
+// =============================================================================
+
+let activeTemplateFieldTarget = null; // tracks last focused input (subject or body)
+
+function initEmailStep() {
+  // Preset buttons
+  if (els.smtpPresets) {
+    els.smtpPresets.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        applySmtpPreset(btn.dataset.preset);
+        els.smtpPresets.forEach((b) => b.classList.toggle("active", b === btn));
+      });
+    });
+  }
+
+  // Test mode toggle switch
+  if (els.emailTestMode) {
+    els.emailTestMode.addEventListener("change", () => {
+      updateTestModeUI();
+      saveSmtpConfig();
+    });
+  }
+
+  // Focus tracking for token chips
+  if (els.emailSubject) {
+    els.emailSubject.addEventListener("focus", () => {
+      activeTemplateFieldTarget = els.emailSubject;
+    });
+    els.emailSubject.addEventListener("input", saveEmailTemplateConfig);
+  }
+  if (els.emailBody) {
+    els.emailBody.addEventListener("focus", () => {
+      activeTemplateFieldTarget = els.emailBody;
+    });
+    els.emailBody.addEventListener("input", saveEmailTemplateConfig);
+  }
+
+  // Auto-save SMTP fields on input
+  [els.smtpHost, els.smtpPort, els.smtpSenderName, els.smtpUsername, els.smtpPassword, els.emailTestAddress].forEach((input) => {
+    if (input) {
+      input.addEventListener("input", saveSmtpConfig);
+    }
+  });
+  if (els.smtpTls) els.smtpTls.addEventListener("change", saveSmtpConfig);
+  if (els.smtpSsl) els.smtpSsl.addEventListener("change", saveSmtpConfig);
+
+  // SMTP Test Connection button
+  if (els.btnSmtpTest) {
+    els.btnSmtpTest.addEventListener("click", handleTestSmtpConnection);
+  }
+
+  // Dispatch and Cancel buttons
+  if (els.btnStartEmail) {
+    els.btnStartEmail.addEventListener("click", startEmailDispatch);
+  }
+  if (els.btnCancelEmail) {
+    els.btnCancelEmail.addEventListener("click", cancelEmailDispatch);
+  }
+
+  // Load persisted configuration from localStorage
+  loadSmtpConfig();
+  loadEmailTemplateConfig();
+  updateTestModeUI();
+}
+
+function applySmtpPreset(preset) {
+  if (preset === "gmail") {
+    if (els.smtpHost) els.smtpHost.value = "smtp.gmail.com";
+    if (els.smtpPort) els.smtpPort.value = "587";
+    if (els.smtpTls) els.smtpTls.checked = true;
+    if (els.smtpSsl) els.smtpSsl.checked = false;
+  } else if (preset === "outlook") {
+    if (els.smtpHost) els.smtpHost.value = "smtp-mail.outlook.com";
+    if (els.smtpPort) els.smtpPort.value = "587";
+    if (els.smtpTls) els.smtpTls.checked = true;
+    if (els.smtpSsl) els.smtpSsl.checked = false;
+  } else if (preset === "yahoo") {
+    if (els.smtpHost) els.smtpHost.value = "smtp.mail.yahoo.com";
+    if (els.smtpPort) els.smtpPort.value = "465";
+    if (els.smtpTls) els.smtpTls.checked = false;
+    if (els.smtpSsl) els.smtpSsl.checked = true;
+  }
+  saveSmtpConfig();
+}
+
+function updateTestModeUI() {
+  const isTest = els.emailTestMode && els.emailTestMode.checked;
+  if (els.testModeContainer) {
+    els.testModeContainer.style.display = isTest ? "flex" : "none";
+  }
+  if (els.btnStartEmail) {
+    if (isTest) {
+      els.btnStartEmail.innerHTML = "🧪 Start Test Dispatch (To My Email)";
+      els.btnStartEmail.style.backgroundColor = "var(--neo-yellow)";
+    } else {
+      els.btnStartEmail.innerHTML = "🚀 Start Bulk Email Dispatch";
+      els.btnStartEmail.style.backgroundColor = "var(--neo-green)";
+    }
+  }
+}
+
+function getSmtpConfig() {
+  return {
+    host: els.smtpHost ? els.smtpHost.value.trim() : "",
+    port: els.smtpPort ? parseInt(els.smtpPort.value, 10) || 587 : 587,
+    use_tls: els.smtpTls ? els.smtpTls.checked : true,
+    use_ssl: els.smtpSsl ? els.smtpSsl.checked : false,
+    sender_name: els.smtpSenderName ? els.smtpSenderName.value.trim() : "DocuNext",
+    username: els.smtpUsername ? els.smtpUsername.value.trim() : "",
+    password: els.smtpPassword ? els.smtpPassword.value : "",
+    sender_email: els.smtpUsername ? els.smtpUsername.value.trim() : "",
+  };
+}
+
+function saveSmtpConfig() {
+  try {
+    const cfg = {
+      host: els.smtpHost?.value || "",
+      port: els.smtpPort?.value || "587",
+      use_tls: els.smtpTls?.checked ?? true,
+      use_ssl: els.smtpSsl?.checked ?? false,
+      sender_name: els.smtpSenderName?.value || "",
+      username: els.smtpUsername?.value || "",
+      password: els.smtpPassword?.value || "",
+      test_mode: els.emailTestMode?.checked ?? true,
+      test_email: els.emailTestAddress?.value || "",
+    };
+    localStorage.setItem("docunext_smtp_config", JSON.stringify(cfg));
+  } catch (_) {}
+}
+
+function loadSmtpConfig() {
+  try {
+    const raw = localStorage.getItem("docunext_smtp_config");
+    if (!raw) return;
+    const cfg = JSON.parse(raw);
+    if (els.smtpHost && cfg.host) els.smtpHost.value = cfg.host;
+    if (els.smtpPort && cfg.port) els.smtpPort.value = cfg.port;
+    if (els.smtpTls && typeof cfg.use_tls === "boolean") els.smtpTls.checked = cfg.use_tls;
+    if (els.smtpSsl && typeof cfg.use_ssl === "boolean") els.smtpSsl.checked = cfg.use_ssl;
+    if (els.smtpSenderName && cfg.sender_name) els.smtpSenderName.value = cfg.sender_name;
+    if (els.smtpUsername && cfg.username) els.smtpUsername.value = cfg.username;
+    if (els.smtpPassword && cfg.password) els.smtpPassword.value = cfg.password;
+    if (els.emailTestMode && typeof cfg.test_mode === "boolean") els.emailTestMode.checked = cfg.test_mode;
+    if (els.emailTestAddress && cfg.test_email) els.emailTestAddress.value = cfg.test_email;
+  } catch (_) {}
+}
+
+function saveEmailTemplateConfig() {
+  try {
+    const cfg = {
+      subject: els.emailSubject?.value || "",
+      body: els.emailBody?.value || "",
+      column: els.emailColumnSelect?.value || "",
+    };
+    localStorage.setItem("docunext_email_template", JSON.stringify(cfg));
+  } catch (_) {}
+}
+
+function loadEmailTemplateConfig() {
+  try {
+    const raw = localStorage.getItem("docunext_email_template");
+    if (!raw) return;
+    const cfg = JSON.parse(raw);
+    if (els.emailSubject && cfg.subject) els.emailSubject.value = cfg.subject;
+    if (els.emailBody && cfg.body) els.emailBody.value = cfg.body;
+  } catch (_) {}
+}
+
+async function handleTestSmtpConnection() {
+  if (!els.smtpHost?.value.trim()) {
+    showToast("Please provide an SMTP host.", "warning");
+    return;
+  }
+  if (!els.smtpUsername?.value.trim()) {
+    showToast("Please provide your SMTP username / email.", "warning");
+    return;
+  }
+
+  if (els.smtpTestStatus) {
+    els.smtpTestStatus.textContent = "⏳ Testing connection...";
+    els.smtpTestStatus.style.color = "#000";
+  }
+  if (els.btnSmtpTest) els.btnSmtpTest.disabled = true;
+
+  try {
+    const cfg = getSmtpConfig();
+    const res = await api.testSmtp(cfg);
+    if (res.success) {
+      if (els.smtpTestStatus) {
+        els.smtpTestStatus.textContent = "✔ Connection Successful!";
+        els.smtpTestStatus.style.color = "var(--neo-green)";
+      }
+      showToast("SMTP Connection Successful!", "success");
+    } else {
+      if (els.smtpTestStatus) {
+        els.smtpTestStatus.textContent = `✖ ${res.message || "Connection failed"}`;
+        els.smtpTestStatus.style.color = "var(--danger)";
+      }
+      showToast(res.message || "Connection failed", "error");
+    }
+  } catch (err) {
+    if (els.smtpTestStatus) {
+      els.smtpTestStatus.textContent = `✖ ${err.message}`;
+      els.smtpTestStatus.style.color = "var(--danger)";
+    }
+    showToast(`SMTP test error: ${err.message}`, "error");
+  } finally {
+    if (els.btnSmtpTest) els.btnSmtpTest.disabled = false;
+  }
+}
+
+function setupEmailView() {
+  if (!els.emailColumnSelect) return;
+  els.emailColumnSelect.innerHTML = "";
+
+  const cols = state.data?.headers || [];
+  let detectedEmailCol = null;
+
+  cols.forEach((col) => {
+    const opt = document.createElement("option");
+    opt.value = col;
+    opt.textContent = col;
+    if (!detectedEmailCol && /email|mail|e-mail/i.test(col)) {
+      detectedEmailCol = col;
+      opt.selected = true;
+    }
+    els.emailColumnSelect.appendChild(opt);
+  });
+
+  // Restore saved column if valid
+  try {
+    const raw = localStorage.getItem("docunext_email_template");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.column && cols.includes(parsed.column)) {
+        els.emailColumnSelect.value = parsed.column;
+      }
+    }
+  } catch (_) {}
+
+  // Render dynamic token chips
+  if (els.emailTokenChips) {
+    els.emailTokenChips.innerHTML = "";
+    cols.forEach((col) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip-tag";
+      chip.textContent = `+ {{${col}}}`;
+      chip.title = `Insert {{${col}}}`;
+      chip.addEventListener("click", () => {
+        insertEmailToken(`{{${col}}}`);
+      });
+      els.emailTokenChips.appendChild(chip);
+    });
+  }
+
+  updateTestModeUI();
+}
+
+function insertEmailToken(tokenStr) {
+  const target = activeTemplateFieldTarget || els.emailBody || els.emailSubject;
+  if (!target) return;
+
+  const start = target.selectionStart ?? target.value.length;
+  const end = target.selectionEnd ?? target.value.length;
+  const before = target.value.substring(0, start);
+  const after = target.value.substring(end);
+  target.value = before + tokenStr + after;
+  target.focus();
+  target.selectionStart = target.selectionEnd = start + tokenStr.length;
+  saveEmailTemplateConfig();
+}
+
+async function startEmailDispatch() {
+  if (!state.activeJobId) {
+    showToast("Please generate certificates in Step 3 first before dispatching emails.", "warning");
+    return;
+  }
+
+  const smtpConfig = getSmtpConfig();
+  if (!smtpConfig.host || !smtpConfig.username) {
+    showToast("Please configure SMTP Host and Username first.", "warning");
+    return;
+  }
+
+  const isTest = els.emailTestMode && els.emailTestMode.checked;
+  const testAddress = els.emailTestAddress?.value.trim() || "";
+
+  if (isTest) {
+    if (!testAddress || !testAddress.includes("@")) {
+      showToast("Test Mode is ON: Please enter a valid test email address.", "error");
+      if (els.emailTestAddress) els.emailTestAddress.focus();
+      return;
+    }
+  } else {
+    const rowCount = state.jobResults?.total_rows || state.data?.total_rows || "all";
+    const confirmed = window.confirm(
+      `⚠️ TEST MODE IS TURNED OFF!\n\nYou are about to send REAL emails to ${rowCount} recipient(s) listed in your spreadsheet.\n\nAre you sure you want to proceed with live dispatch?`
+    );
+    if (!confirmed) return;
+  }
+
+  const emailCol = els.emailColumnSelect?.value || "";
+  if (!emailCol && !isTest) {
+    showToast("Please select the recipient email column from your spreadsheet.", "warning");
+    return;
+  }
+
+  const subject = els.emailSubject?.value.trim() || "Your Certificate";
+  const body = els.emailBody?.value.trim() || "";
+
+  // Reset UI
+  if (els.btnStartEmail) els.btnStartEmail.disabled = true;
+  if (els.btnCancelEmail) els.btnCancelEmail.style.display = "inline-block";
+  if (els.emailProgressSection) els.emailProgressSection.style.display = "block";
+  if (els.emailProgressFill) els.emailProgressFill.style.width = "0%";
+  if (els.emailProgressPercent) els.emailProgressPercent.textContent = "0%";
+  if (els.emailStatProcessed) els.emailStatProcessed.textContent = "0";
+  if (els.emailStatTotal) els.emailStatTotal.textContent = "0";
+  if (els.emailStatSuccess) els.emailStatSuccess.textContent = "0";
+  if (els.emailStatFailed) els.emailStatFailed.textContent = "0";
+  if (els.emailLogsBody) els.emailLogsBody.innerHTML = "";
+
+  try {
+    const delay = parseFloat(els.emailDelaySelect?.value) || 1.5;
+    const payload = {
+      job_id: state.activeJobId,
+      data_id: state.data?.data_id || "",
+      smtp_config: smtpConfig,
+      email_column: emailCol,
+      subject_template: subject,
+      body_template: body,
+      test_mode: isTest,
+      test_email: testAddress,
+      delay_seconds: delay,
+    };
+
+    const res = await api.startEmailBatch(payload);
+    state.emailJobId = res.email_job_id;
+    showToast(isTest ? "Test email dispatch started!" : "Bulk email dispatch started!", "info");
+
+    // Begin Polling
+    if (state.emailPollTimer) clearInterval(state.emailPollTimer);
+    state.emailPollTimer = setInterval(pollEmailJob, 1000);
+  } catch (err) {
+    showToast(`Failed to start email batch: ${err.message}`, "error");
+    if (els.btnStartEmail) els.btnStartEmail.disabled = false;
+    if (els.btnCancelEmail) els.btnCancelEmail.style.display = "none";
+  }
+}
+
+async function pollEmailJob() {
+  if (!state.emailJobId) return;
+
+  try {
+    const job = await api.getEmailJobStatus(state.emailJobId);
+
+    const total = job.total || 1;
+    const processed = job.processed || 0;
+    const percent = Math.min(100, Math.round((processed / total) * 100));
+
+    if (els.emailProgressFill) els.emailProgressFill.style.width = `${percent}%`;
+    if (els.emailProgressPercent) els.emailProgressPercent.textContent = `${percent}%`;
+    if (els.emailStatProcessed) els.emailStatProcessed.textContent = processed;
+    if (els.emailStatTotal) els.emailStatTotal.textContent = job.total;
+    if (els.emailStatSuccess) els.emailStatSuccess.textContent = job.succeeded || 0;
+    if (els.emailStatFailed) els.emailStatFailed.textContent = job.failed || 0;
+
+    // Render logs
+    renderEmailLogs(job.logs || []);
+
+    if (job.status === "completed" || job.status === "cancelled" || job.status === "failed") {
+      clearInterval(state.emailPollTimer);
+      state.emailPollTimer = null;
+
+      if (els.btnStartEmail) els.btnStartEmail.disabled = false;
+      if (els.btnCancelEmail) els.btnCancelEmail.style.display = "none";
+
+      if (job.status === "completed") {
+        showToast("Bulk email dispatch finished successfully!", "success");
+      } else if (job.status === "cancelled") {
+        showToast("Bulk email dispatch stopped.", "warning");
+      } else if (job.status === "failed") {
+        showToast(`Email dispatch failed: ${job.error || "Unknown error"}`, "error");
+      }
+    }
+  } catch (err) {
+    console.error("Error polling email job:", err);
+  }
+}
+
+function renderEmailLogs(logs) {
+  if (!els.emailLogsBody) return;
+  els.emailLogsBody.innerHTML = "";
+
+  logs.forEach((log) => {
+    const tr = document.createElement("tr");
+    tr.style.borderBottom = "1px solid #ddd";
+
+    const statusBadge =
+      log.status === "sent"
+        ? '<span style="background: var(--neo-green); border: 1.5px solid #000; padding: 2px 6px; font-weight: 800; font-size: 0.72rem;">SENT</span>'
+        : log.status === "skipped"
+        ? '<span style="background: var(--neo-orange); border: 1.5px solid #000; padding: 2px 6px; font-weight: 800; font-size: 0.72rem;">SKIPPED</span>'
+        : '<span style="background: var(--danger); color: #fff; border: 1.5px solid #000; padding: 2px 6px; font-weight: 800; font-size: 0.72rem;">FAILED</span>';
+
+    tr.innerHTML = `
+      <td style="padding: 6px 10px; font-weight: 800;">#${log.index + 1}</td>
+      <td style="padding: 6px 10px; font-weight: 700;">${escapeHtml(log.recipient || "-")}</td>
+      <td style="padding: 6px 10px; font-family: monospace; font-size: 0.78rem;">${escapeHtml(log.target_email || "-")}</td>
+      <td style="padding: 6px 10px;">${statusBadge}</td>
+      <td style="padding: 6px 10px; color: #555; font-size: 0.75rem;">${log.timestamp || "-"}</td>
+      <td style="padding: 6px 10px; font-size: 0.75rem; color: ${log.error ? "var(--danger)" : "#555"};">${escapeHtml(log.error || "Delivered with PDF")}</td>
+    `;
+    els.emailLogsBody.appendChild(tr);
+  });
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function cancelEmailDispatch() {
+  if (!state.emailJobId) return;
+  try {
+    await api.cancelEmailJob(state.emailJobId);
+    showToast("Stopping email dispatch...", "info");
+  } catch (err) {
+    showToast(`Failed to cancel dispatch: ${err.message}`, "error");
+  }
 }
 
 // Toast Notifications

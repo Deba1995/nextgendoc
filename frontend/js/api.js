@@ -115,4 +115,41 @@ export const api = {
     if (!res.ok) throw new Error("Failed to load sample assets");
     return await res.json();
   },
+
+  async testSmtp(smtpConfig) {
+    const res = await fetch("/api/email/test-connection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(smtpConfig),
+    });
+    if (!res.ok) throw new Error("Failed to connect to SMTP server");
+    return await res.json();
+  },
+
+  async startEmailBatch(payload) {
+    const res = await fetch("/api/email/send-batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Failed to start email batch" }));
+      throw new Error(err.detail || "Email dispatch failed");
+    }
+    return await res.json();
+  },
+
+  async getEmailJobStatus(jobId) {
+    const res = await fetch(`/api/email/status/${encodeURIComponent(jobId)}`);
+    if (!res.ok) throw new Error("Failed to fetch email job status");
+    return await res.json();
+  },
+
+  async cancelEmailJob(jobId) {
+    const res = await fetch(`/api/email/cancel/${encodeURIComponent(jobId)}`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new Error("Failed to cancel email job");
+    return await res.json();
+  },
 };

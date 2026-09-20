@@ -14,54 +14,80 @@
       <svg class="brand-icon" viewBox="0 0 24 24">
         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm-4 8H7v-2h6v2z"/>
       </svg>
-      <div class="brand-title">
-        DocuNext
-      </div>
-    </div>
-
-    <!-- Stepper Navigation -->
-    <nav class="stepper-nav">
-      <button class="step-btn active" data-step="1">
-        <span class="step-num">1</span>
-        <span>Upload &amp; Match</span>
-      </button>
-      <button class="step-btn" data-step="2">
-        <span class="step-num">2</span>
-        <span>Layout &amp; Design</span>
-      </button>
-      <button class="step-btn" data-step="3">
-        <span class="step-num">3</span>
-        <span>Generate &amp; Export</span>
-      </button>
-    </nav>
-
-    <!-- Header Actions -->
-    <div class="header-actions">
-      <div style="display: flex; align-items: center; gap: 6px; background: #fff; padding: 2px 6px; border: 2px solid #000; box-shadow: 2px 2px 0 #000;">
-        <span style="font-size: 0.72rem; font-weight: 900; text-transform: uppercase;">DEMO:</span>
-        <select id="demo-row-count" class="select-input" style="width: 90px; padding: 2px 4px; border: 1.5px solid #000; font-size: 0.75rem; box-shadow: none;" title="Rows for sample generator">
-          <option value="10">10 rows</option>
-          <option value="50" selected>50 rows</option>
-          <option value="100">100 rows</option>
-          <option value="250">250 rows</option>
-          <option value="500">500 rows</option>
-        </select>
-        <button id="btn-demo-flat" class="btn btn-neo-cyan btn-sm" title="Load sample flat certificate">
-          &plus; Flat
-        </button>
-        <button id="btn-demo-acro" class="btn btn-neo-pink btn-sm" title="Load sample AcroForm fillable certificate">
-          &plus; AcroForm
-        </button>
-      </div>
-      <button id="btn-load-project" class="btn btn-secondary btn-sm">Load Project</button>
-      <button id="btn-save-project" class="btn btn-neo-yellow btn-sm">Save Project</button>
-      <button id="btn-new-project" class="btn btn-secondary btn-sm" style="color: #000;">&olarr; Reset</button>
-      <a href="https://github.com/Deba1995/nextgendoc" target="_blank" rel="noopener noreferrer" class="btn btn-sm" title="View source on GitHub" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; background: #000; color: #fff; font-weight: 800; border: 2px solid #000; box-shadow: 2px 2px 0 #000;">
-        <svg style="width: 15px; height: 15px; fill: #fff;" viewBox="0 0 24 24">
+      <div class="brand-title">DocuNext</div>
+      <a href="https://github.com/Deba1995/nextgendoc" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-header-gh" title="View source on GitHub" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; background: #000; color: #fff; font-weight: 800; border: 2px solid #000; box-shadow: 2px 2px 0 #000; padding: 4px 8px; font-size: 0.75rem;">
+        <svg style="width: 14px; height: 14px; fill: #fff;" viewBox="0 0 24 24">
           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
         </svg>
         <span>GitHub</span>
       </a>
+    </div>
+
+    <!-- 4-Step Navigation -->
+    <nav class="stepper-nav">
+      <button class="step-btn active" data-step="1">
+        <span class="step-num">1</span>
+        <span>Upload</span>
+      </button>
+      <button class="step-btn" data-step="2">
+        <span class="step-num">2</span>
+        <span>Design</span>
+      </button>
+      <button class="step-btn" data-step="3">
+        <span class="step-num">3</span>
+        <span>Generate</span>
+      </button>
+      <button class="step-btn" data-step="4">
+        <span class="step-num">4</span>
+        <span>Email</span>
+      </button>
+    </nav>
+
+    <!-- Header Actions (Consolidated Dropdowns) -->
+    <div class="header-actions">
+      <!-- Demo Popover Menu -->
+      <div class="dropdown-wrapper">
+        <button id="btn-toggle-demo-menu" class="btn btn-neo-cyan btn-sm" style="display: flex; align-items: center; gap: 4px;">
+          <span>⚡ Demo ▾</span>
+        </button>
+        <div id="demo-menu-dropdown" class="header-dropdown-menu">
+          <div style="font-size: 0.72rem; font-weight: 900; text-transform: uppercase; margin-bottom: 6px; color: #333;">Select Rows:</div>
+          <select id="demo-row-count" class="select-input" style="width: 100%; margin-bottom: 8px; padding: 4px 6px; font-size: 0.8rem;">
+            <option value="10">10 rows (Quick test)</option>
+            <option value="50" selected>50 rows (Standard)</option>
+            <option value="100">100 rows (Medium)</option>
+            <option value="250">250 rows (Large)</option>
+            <option value="500">500 rows (Stress test)</option>
+          </select>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button id="btn-demo-flat" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center; font-size: 0.75rem;">
+              + Load Flat PDF Demo
+            </button>
+            <button id="btn-demo-acro" class="btn btn-neo-pink btn-sm" style="width: 100%; justify-content: center; font-size: 0.75rem;">
+              + Load AcroForm Demo
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project Popover Menu -->
+      <div class="dropdown-wrapper">
+        <button id="btn-toggle-project-menu" class="btn btn-neo-yellow btn-sm" style="display: flex; align-items: center; gap: 4px;">
+          <span>📁 Project ▾</span>
+        </button>
+        <div id="project-menu-dropdown" class="header-dropdown-menu">
+          <button id="btn-save-project" class="dropdown-item-btn">
+            <span>💾 Save Current Layout</span>
+          </button>
+          <button id="btn-load-project" class="dropdown-item-btn">
+            <span>📂 Open Saved Project</span>
+          </button>
+          <div style="border-top: 1.5px solid #000; margin: 4px 0;"></div>
+          <button id="btn-new-project" class="dropdown-item-btn" style="color: var(--danger);">
+            <span>↺ Reset All Fields</span>
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -451,15 +477,20 @@
           <ul id="warnings-list" style="margin-top: 6px; padding-left: 20px;"></ul>
         </div>
 
-        <!-- Download All ZIP button -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+        <!-- Download All ZIP button & Next Step 4 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 10px;">
           <div style="font-size: 0.85rem; font-weight: 700; color: #444;">
             Files are saved to your local disk in <code>docunext/output/</code>.
           </div>
-          <a id="btn-download-zip" href="#" class="btn btn-neo-green" style="display: none; padding: 10px 22px; font-size: 0.95rem; border: var(--border-thick); box-shadow: var(--shadow-hard);">
-            <svg style="width: 18px; height: 18px; fill: currentColor;" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-            Download All as ZIP
-          </a>
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <a id="btn-download-zip" href="#" class="btn btn-neo-green" style="display: none; padding: 10px 22px; font-size: 0.95rem; border: var(--border-thick); box-shadow: var(--shadow-hard);">
+              <svg style="width: 18px; height: 18px; fill: currentColor;" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Download All as ZIP
+            </a>
+            <button id="btn-proceed-step4" class="btn btn-neo-yellow" style="display: none; padding: 10px 22px; font-size: 0.95rem; border: var(--border-thick); box-shadow: var(--shadow-hard);">
+              <span>✉️ Next: Dispatch via Email &rarr;</span>
+            </button>
+          </div>
         </div>
 
         <!-- Generated Files Table -->
@@ -474,6 +505,220 @@
             </thead>
             <tbody id="files-table-body"></tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4: EMAIL DISPATCH VIEW -->
+    <section id="view-email" class="view-panel">
+      <!-- 1. SMTP Configuration Card -->
+      <div class="config-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <svg style="width: 24px; height: 24px; fill: #000;" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+            1. SMTP Server Setup
+          </h2>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm btn-smtp-preset active" data-preset="gmail" style="font-size: 0.72rem; padding: 2px 8px;">Gmail</button>
+            <button type="button" class="btn btn-sm btn-smtp-preset" data-preset="outlook" style="font-size: 0.72rem; padding: 2px 8px;">Outlook</button>
+            <button type="button" class="btn btn-sm btn-smtp-preset" data-preset="yahoo" style="font-size: 0.72rem; padding: 2px 8px;">Yahoo</button>
+            <button type="button" class="btn btn-sm btn-smtp-preset" data-preset="custom" style="font-size: 0.72rem; padding: 2px 8px;">Custom</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">SMTP Host</label>
+            <input type="text" id="smtp-host" class="text-input" value="smtp.gmail.com" placeholder="e.g. smtp.gmail.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Port</label>
+            <input type="number" id="smtp-port" class="text-input" value="587">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 18px; align-items: center; margin-top: -6px;">
+          <label class="checkbox-label">
+            <input type="radio" name="smtp-enc" value="tls" id="smtp-tls" checked>
+            <span>STARTTLS (Port 587 - Recommended)</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="radio" name="smtp-enc" value="ssl" id="smtp-ssl">
+            <span>SSL / TLS (Port 465)</span>
+          </label>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">Sender Name</label>
+            <input type="text" id="smtp-sender-name" class="text-input" value="Certificates Admin" placeholder="e.g. Event Organization">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sender Email / Username</label>
+            <input type="email" id="smtp-username" class="text-input" placeholder="e.g. yourname@gmail.com">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password / App Password</label>
+          <input type="password" id="smtp-password" class="text-input" placeholder="16-character Google App Password (not regular password)">
+          <div style="font-size: 0.75rem; font-weight: 700; color: #444; margin-top: 4px;">
+            🔒 Security Notice: Passwords are saved only in your local browser and sent directly to your SMTP server over encrypted TLS.
+          </div>
+        </div>
+
+        <div style="background: var(--neo-yellow); border: 2px solid #000; padding: 10px 14px; box-shadow: 2px 2px 0 #000; font-size: 0.8rem; font-weight: 700;">
+          💡 <strong>Gmail Users:</strong> Google requires an <strong>App Password</strong>. Go to your <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" style="color: #000; text-decoration: underline; font-weight: 900;">Google Account &rarr; Security &rarr; 2-Step Verification &rarr; App Passwords</a> and generate one.
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; border-top: 2px solid #000; padding-top: 12px;">
+          <button type="button" id="btn-smtp-test" class="btn btn-secondary btn-sm" style="padding: 8px 16px;">
+            🔌 Test SMTP Connection
+          </button>
+          <span id="smtp-test-status" style="font-size: 0.85rem; font-weight: 800;"></span>
+        </div>
+      </div>
+
+      <!-- 2. 🧪 TEST MODE TOGGLE CARD (Key User Feature) -->
+      <div class="config-card" style="background-color: #FFFDE6; border: var(--border-thick); box-shadow: var(--shadow-hard-lg);">
+        <div class="card-header" style="border-bottom: 2px solid #000; padding-bottom: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <label class="switch-toggle">
+              <input type="checkbox" id="email-test-mode" checked>
+              <span class="slider-round"></span>
+            </label>
+            <div>
+              <h3 style="font-size: 1.1rem; font-weight: 900; text-transform: uppercase;">
+                🧪 Test Mode: Send All Certificates to One Email
+              </h3>
+              <p style="font-size: 0.78rem; font-weight: 700; color: #333;">
+                Safely verify email formatting and individual certificate attachments before emailing actual recipients.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div id="test-mode-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px;">
+          <div class="form-group">
+            <label class="form-label">Your Personal Test Email Destination</label>
+            <input type="email" id="email-test-address" class="text-input" placeholder="e.g. my-inbox@gmail.com" style="background: #fff; font-weight: 800;">
+          </div>
+          <div style="background: var(--neo-cyan); border: 2px solid #000; padding: 8px 12px; font-size: 0.8rem; font-weight: 800; box-shadow: 2px 2px 0 #000;">
+            ✔ While Test Mode is ON: All generated certificates will be delivered directly to this test address. Zero emails will be sent to spreadsheet recipients.
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Email Template & Composer Card -->
+      <div class="config-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <svg style="width: 24px; height: 24px; fill: #000;" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            2. Email Template &amp; Message
+          </h2>
+          <span style="font-size: 0.75rem; font-weight: 800; background: var(--neo-green); border: 1.5px solid #000; padding: 2px 6px;">DYNAMIC TOKENS</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Recipient Email Column (from Spreadsheet)</label>
+          <select id="email-column-select" class="select-input"></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Subject Line</label>
+          <input type="text" id="email-subject" class="text-input" value="Your Certificate: {{Recipient Name}} - {{Course Title}}">
+          <div style="font-size: 0.75rem; font-weight: 800; margin-top: 6px; color: #222;">Click token to insert into subject or body:</div>
+          <div id="email-token-chips" class="chips-suggestions"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Body (Plain Text or HTML)</label>
+          <textarea id="email-body" class="text-input" rows="8" style="font-family: var(--font-sans); font-size: 0.9rem; line-height: 1.5; resize: vertical;">Dear {{Recipient Name}},
+
+Congratulations! Please find your official certificate for {{Course Title}} attached to this email.
+
+Certificate ID: {{Certificate ID}}
+Date of Issue: {{Completion Date}}
+
+Best regards,
+DocuNext Certifications Team</textarea>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; background: #FAF7F0; border: 2px solid #000; padding: 8px 12px; font-size: 0.8rem; font-weight: 800;">
+          <span style="font-size: 1.1rem;">📎</span>
+          <span>Each recipient's personalized certificate PDF generated in Step 3 will be attached automatically.</span>
+        </div>
+      </div>
+
+      <!-- 4. Dispatch Controller Card -->
+      <div class="config-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <label class="form-label" style="margin-bottom: 0;">Rate-limit Throttle:</label>
+            <select id="email-delay-select" class="select-input" style="width: 140px; padding: 4px 8px;">
+              <option value="0.8">0.8s (Fast)</option>
+              <option value="1.5" selected>1.5s (Standard)</option>
+              <option value="2.5">2.5s (Safe)</option>
+              <option value="5.0">5.0s (Very Safe)</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button type="button" id="btn-cancel-email" class="btn btn-danger" style="display: none; padding: 12px 24px; font-size: 1rem; border: var(--border-thick); box-shadow: var(--shadow-hard-lg);">
+              🛑 Stop Dispatch
+            </button>
+            <button type="button" id="btn-start-email" class="btn btn-neo-green" style="padding: 12px 30px; font-size: 1rem; border: var(--border-thick); box-shadow: var(--shadow-hard-lg); font-weight: 900;">
+              🚀 Start Bulk Email Dispatch
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Progress Section -->
+        <div id="email-progress-section" style="display: none; border-top: 2px solid #000; padding-top: 18px; margin-top: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 style="font-size: 1.1rem; font-weight: 900; text-transform: uppercase;">Email Dispatch Progress</h3>
+            <span id="email-progress-percent" style="font-size: 1.3rem; font-weight: 900; background: var(--neo-yellow); border: 2px solid #000; padding: 2px 8px; box-shadow: 2px 2px 0 #000;">0%</span>
+          </div>
+
+          <div class="progress-bar-track">
+            <div id="email-progress-fill" class="progress-bar-fill"></div>
+          </div>
+
+          <div class="stats-row" style="margin-top: 14px;">
+            <div class="stat-box">
+              <div id="email-stat-processed" class="stat-val">0</div>
+              <div class="stat-label">Processed</div>
+            </div>
+            <div class="stat-box">
+              <div id="email-stat-total" class="stat-val">0</div>
+              <div class="stat-label">Total Recipients</div>
+            </div>
+            <div class="stat-box">
+              <div id="email-stat-success" class="stat-val" style="color: var(--neo-green);">0</div>
+              <div class="stat-label">Delivered</div>
+            </div>
+            <div class="stat-box">
+              <div id="email-stat-failed" class="stat-val" style="color: var(--danger);">0</div>
+              <div class="stat-label">Failed / Skipped</div>
+            </div>
+          </div>
+
+          <!-- Live Delivery Logs Table -->
+          <div class="files-table-container" style="margin-top: 16px; max-height: 280px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+              <thead>
+                <tr style="background-color: var(--neo-yellow); border-bottom: 2px solid #000; color: #000; text-align: left; font-weight: 900; text-transform: uppercase;">
+                  <th style="padding: 8px 10px; width: 40px;">#</th>
+                  <th style="padding: 8px 10px;">Recipient</th>
+                  <th style="padding: 8px 10px;">Target Email</th>
+                  <th style="padding: 8px 10px; width: 100px;">Status</th>
+                  <th style="padding: 8px 10px; width: 80px;">Time</th>
+                  <th style="padding: 8px 10px;">Details</th>
+                </tr>
+              </thead>
+              <tbody id="email-logs-body"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>

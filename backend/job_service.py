@@ -60,6 +60,7 @@ def start_generation_job(
         "output_dir": str(job_dir.resolve()),
         "zip_path": None,
         "generated_files": [],
+        "target_rows": rows,
     }
 
     with JOB_LOCK:
@@ -119,6 +120,7 @@ def _run_generation_worker(
                 generated_files.append({
                     "filename": filename,
                     "row_index": idx + 1,
+                    "path": str(out_pdf_path.resolve()),
                     "size_bytes": out_pdf_path.stat().st_size if out_pdf_path.exists() else 0,
                 })
             except Exception as e:

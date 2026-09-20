@@ -181,7 +181,7 @@ def generate_sample_assets(output_dir: Path, row_count: int = 10):
         ws = wb.active
         ws.title = "Certificates"
 
-        headers = ["Recipient Name", "Course Title", "Completion Date", "Grade", "Certificate ID"]
+        headers = ["Recipient Name", "Recipient Email", "Course Title", "Completion Date", "Grade", "Certificate ID"]
         ws.append(headers)
 
         first_names = [
@@ -220,7 +220,10 @@ def generate_sample_assets(output_dir: Path, row_count: int = 10):
             day = 10 + (i % 18)
             date_str = f"2026-05-{day:02d}"
             cert_id = f"CERT-2026-{i + 1:04d}"
-            ws.append([f"{fn} {ln}", course, date_str, grade, cert_id])
+            safe_fn = fn.replace("Dr. ", "").strip().lower().replace(" ", "")
+            safe_ln = ln.lower().replace("-", "").replace("'", "")
+            email_addr = f"{safe_fn}.{safe_ln}{i + 1}@example.com"
+            ws.append([f"{fn} {ln}", email_addr, course, date_str, grade, cert_id])
 
         wb.save(str(excel_path))
         wb.close()

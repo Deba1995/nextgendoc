@@ -13,6 +13,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .data_service import auto_match_headers, parse_spreadsheet
+from .email_service import (
+    cancel_email_job,
+    get_email_job,
+    start_email_job,
+    verify_smtp_connection,
+)
 from .job_service import get_job, list_jobs, start_generation_job
 from .pdf_service import generate_sample_preview, inspect_pdf, render_page_to_base64
 from .sample_service import generate_sample_assets
@@ -77,6 +83,28 @@ class GenerateRequest(BaseModel):
     page_num: Optional[int] = 0
     row_start: Optional[int] = 0
     row_limit: Optional[int] = None
+
+
+class TestSmtpRequest(BaseModel):
+    host: str
+    port: Optional[int] = 587
+    use_tls: Optional[bool] = True
+    use_ssl: Optional[bool] = False
+    username: Optional[str] = ""
+    password: Optional[str] = ""
+
+
+class SendEmailBatchRequest(BaseModel):
+    job_id: str
+    data_id: Optional[str] = ""
+    smtp_config: Dict[str, Any]
+    email_column: str
+    subject_template: str
+    body_template: str
+    test_mode: Optional[bool] = False
+    test_email: Optional[str] = ""
+    delay_seconds: Optional[float] = 1.2
+
 
 
 @app.get("/api/health")
@@ -340,6 +368,79 @@ async def load_sample(sample_type: str = "flat", row_count: int = 10):
             "preview_rows": parsed["preview_rows"],
         },
     }
+
+
+# ==============================================================================
+# EMAIL DISPATCH ENDPOINTS (Step 4)
+# ==============================================================================
+
+@app.post("/api/email/test-connection")
+async def test_email_connection(req: TestSmtpRequest):
+    result = verify_smtp_connection(
+        host=req.host,
+        port=req.port or 587,
+        use_tls=req.use_tls if req.use_tls is not None else True,
+        use_ssl=req.use_ssl if req.use_ssl is not None else False,
+        username=req.username or "",
+        password=req.password or "",
+    )
+    return result
+
+
+@app.post("/api/email/send-batch")
+async def send_email_batch(req: SendEmailBatchRequest):
+    gen_job = get_job(req.job_id)
+    if not gen_job:
+        raise HTTPException(status_code=404, detail="Certificate generation job not found.")
+
+    rows = gen_job.get("target_rows")
+    if not rows:
+        if req.data_id and req.data_id in SESSION_DATA:
+            rows = SESSION_DATA[req.data_id].get("all_rows", SESSION_DATA[req.data_id].get("rows", SESSION_DATA[req.data_id].get("preview_rows", [])))
+        else:
+            raise HTTPException(status_code=404, detail="Spreadsheet dataset not found in session.")
+
+    job_dir = Path(gen_job.get("output_dir", OUTPUT_DIR / req.job_id))
+    generated_files = gen_job.get("generated_files", [])
+    for gf in generated_files:
+        if "path" not in gf or not gf["path"]:
+            gf["path"] = str((job_dir / gf["filename"]).resolve())
+
+    if req.test_mode and not req.test_email:
+        raise HTTPException(status_code=400, detail="Test Mode is active: please enter a destination test email address.")
+
+    email_job_id = start_email_job(
+        smtp_config=req.smtp_config,
+        email_column=req.email_column,
+        subject_template=req.subject_template,
+        body_template=req.body_template,
+        rows=rows,
+        generated_files=generated_files,
+        test_mode=req.test_mode or False,
+        test_email=req.test_email or "",
+        delay_seconds=req.delay_seconds or 1.2,
+    )
+
+    return {
+        "email_job_id": email_job_id,
+        "status": "queued",
+        "total": len(rows),
+        "test_mode": req.test_mode,
+    }
+
+
+@app.get("/api/email/status/{job_id}")
+async def get_email_status(job_id: str):
+    job = get_email_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Email job not found.")
+    return job
+
+
+@app.post("/api/email/cancel/{job_id}")
+async def cancel_email(job_id: str):
+    success = cancel_email_job(job_id)
+    return {"cancelled": success}
 
 
 # Mount frontend static files

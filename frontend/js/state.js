@@ -11,6 +11,8 @@ export const state = {
   isWysiwygPreview: false,
   activeJobId: null,
   jobPollTimer: null,
+  emailJobId: null,
+  emailPollTimer: null,
   listeners: [],
 
   subscribe(listener) {
