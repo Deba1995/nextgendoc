@@ -251,6 +251,10 @@ function initNavigation() {
       els.demoMenuDropdown.classList.toggle("show");
       els.projectMenuDropdown?.classList.remove("show");
     });
+    // Prevent clicks inside the dropdown (like selecting rows) from closing it
+    els.demoMenuDropdown.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
   }
 
   if (els.btnToggleProjectMenu && els.projectMenuDropdown) {
@@ -259,8 +263,13 @@ function initNavigation() {
       els.projectMenuDropdown.classList.toggle("show");
       els.demoMenuDropdown?.classList.remove("show");
     });
+    // Prevent clicks inside the dropdown from closing it
+    els.projectMenuDropdown.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
   }
 
+  // Close dropdowns when clicking outside
   document.addEventListener("click", () => {
     els.demoMenuDropdown?.classList.remove("show");
     els.projectMenuDropdown?.classList.remove("show");
@@ -391,7 +400,13 @@ async function loadDemo(type) {
       });
     }
 
-    showToast("Demo loaded successfully! You can switch to Step 2 Editor or customize fields.", "success");
+    // Close demo dropdown menu
+    els.demoMenuDropdown?.classList.remove("show");
+
+    // Automatically navigate to Step 2 Design view for immediate visual feedback
+    state.setStep(2);
+
+    showToast("Demo loaded successfully! You can customize fields or proceed to generate.", "success");
     checkAutoMatch();
   } catch (err) {
     showToast(err.message, "error");
@@ -1115,6 +1130,7 @@ function setupCompletedJob(jobId, job) {
 // Project Save & Load Modals
 function initModals() {
   els.btnSaveProject.addEventListener("click", async () => {
+    els.projectMenuDropdown?.classList.remove("show");
     const name = prompt("Enter a name for this project:", state.template?.filename || "certificate_design");
     if (!name) return;
 
@@ -1128,6 +1144,7 @@ function initModals() {
   });
 
   els.btnLoadProject.addEventListener("click", async () => {
+    els.projectMenuDropdown?.classList.remove("show");
     try {
       const res = await api.listProjects();
       renderProjectsList(res.projects);
@@ -1142,6 +1159,7 @@ function initModals() {
   });
 
   els.btnNewProject.addEventListener("click", () => {
+    els.projectMenuDropdown?.classList.remove("show");
     if (confirm("Start a new project? Any unsaved layout changes will be cleared.")) {
       window.location.reload();
     }
@@ -1640,4 +1658,8 @@ function showToast(message, type = "info") {
 }
 
 // Bootstrapping
-window.addEventListener("DOMContentLoaded", init);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
