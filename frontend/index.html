@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DocuNext - Certificate Generator</title>
+  <title>DocuNext - Bulk PDF Stamping &amp; Email Suite</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -663,14 +663,25 @@ DocuNext Certifications Team</textarea>
             </select>
           </div>
 
-          <div style="display: flex; gap: 10px; align-items: center;">
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
             <button type="button" id="btn-cancel-email" class="btn btn-danger" style="display: none; padding: 12px 24px; font-size: 1rem; border: var(--border-thick); box-shadow: var(--shadow-hard-lg);">
               🛑 Stop Dispatch
+            </button>
+            <button type="button" id="btn-resume-email" class="btn btn-neo-yellow" style="display: none; padding: 12px 24px; font-size: 1rem; border: var(--border-thick); box-shadow: var(--shadow-hard-lg); font-weight: 900;">
+              ▶ Resume Remaining
+            </button>
+            <button type="button" id="btn-retry-failed-email" class="btn btn-secondary" style="display: none; padding: 12px 20px; font-size: 0.95rem; border: var(--border-thick); box-shadow: var(--shadow-hard-lg); font-weight: 800;">
+              🔄 Retry Failed (<span id="retry-failed-count">0</span>)
             </button>
             <button type="button" id="btn-start-email" class="btn btn-neo-green" style="padding: 12px 30px; font-size: 1rem; border: var(--border-thick); box-shadow: var(--shadow-hard-lg); font-weight: 900;">
               🚀 Start Bulk Email Dispatch
             </button>
           </div>
+        </div>
+
+        <!-- Resumption Alert Banner -->
+        <div id="email-resume-banner" style="display: none; background: #FFFDE6; border: 2px solid #000; padding: 10px 14px; margin-top: 14px; box-shadow: 2px 2px 0 #000; font-size: 0.85rem; font-weight: 800;">
+          <div id="email-resume-banner-text">Previous dispatch was paused/interrupted. You can safely resume remaining recipients or retry failed ones without duplicate emails.</div>
         </div>
 
         <!-- Live Progress Section -->
@@ -703,8 +714,16 @@ DocuNext Certifications Team</textarea>
             </div>
           </div>
 
+          <!-- Live Delivery Logs Header & CSV Export -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+            <div style="font-size: 0.85rem; font-weight: 800; text-transform: uppercase;">Real-Time Delivery Audit Log:</div>
+            <button type="button" id="btn-export-email-csv" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 4px 10px; font-weight: 800;">
+              📥 Export Delivery Report (CSV)
+            </button>
+          </div>
+
           <!-- Live Delivery Logs Table -->
-          <div class="files-table-container" style="margin-top: 16px; max-height: 280px;">
+          <div class="files-table-container" style="margin-top: 6px; max-height: 280px;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
               <thead>
                 <tr style="background-color: var(--neo-yellow); border-bottom: 2px solid #000; color: #000; text-align: left; font-weight: 900; text-transform: uppercase;">
@@ -729,7 +748,7 @@ DocuNext Certifications Team</textarea>
   <footer class="app-footer">
     <div style="display: flex; align-items: center; gap: 8px;">
       <span style="display: inline-block; width: 8px; height: 8px; background: var(--neo-green); border: 1.5px solid #000;"></span>
-      <span>DocuNext &bull; Batch Certificate Generator</span>
+      <span>DocuNext &bull; Bulk PDF Stamping &amp; Email Suite</span>
     </div>
     <div>
       Open Source on <a href="https://github.com/Deba1995/nextgendoc" target="_blank" rel="noopener noreferrer" style="color: #000; text-decoration: underline; font-weight: 900;">GitHub: Deba1995/nextgendoc</a>

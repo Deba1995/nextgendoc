@@ -8,14 +8,16 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .data_service import auto_match_headers, parse_spreadsheet
 from .email_service import (
     cancel_email_job,
+    generate_email_csv_report,
     get_email_job,
+    load_persisted_email_report,
     start_email_job,
     verify_smtp_connection,
 )
@@ -35,7 +37,7 @@ SAMPLE_DIR = BASE_DIR / "samples"
 for d in [TEMPLATES_DIR, DATA_DIR, PROJECTS_DIR, OUTPUT_DIR, SAMPLE_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="DocuNext - Offline Certificate Generator", version="1.0.0")
+app = FastAPI(title="DocuNext - Bulk PDF Stamping & Email Suite", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -104,6 +106,8 @@ class SendEmailBatchRequest(BaseModel):
     test_mode: Optional[bool] = False
     test_email: Optional[str] = ""
     delay_seconds: Optional[float] = 1.2
+    target_indices: Optional[List[int]] = None
+    existing_logs: Optional[List[Dict[str, Any]]] = None
 
 
 
@@ -409,6 +413,8 @@ async def send_email_batch(req: SendEmailBatchRequest):
     if req.test_mode and not req.test_email:
         raise HTTPException(status_code=400, detail="Test Mode is active: please enter a destination test email address.")
 
+    report_file = job_dir / "email_report.json"
+
     email_job_id = start_email_job(
         smtp_config=req.smtp_config,
         email_column=req.email_column,
@@ -419,6 +425,9 @@ async def send_email_batch(req: SendEmailBatchRequest):
         test_mode=req.test_mode or False,
         test_email=req.test_email or "",
         delay_seconds=req.delay_seconds or 1.2,
+        target_indices=req.target_indices,
+        existing_logs=req.existing_logs,
+        report_file=report_file,
     )
 
     return {
@@ -433,8 +442,35 @@ async def send_email_batch(req: SendEmailBatchRequest):
 async def get_email_status(job_id: str):
     job = get_email_job(job_id)
     if not job:
+        # Check if job_id was a gen_job_id or has saved report
+        report_file = OUTPUT_DIR / job_id / "email_report.json"
+        job = load_persisted_email_report(report_file)
+    if not job:
         raise HTTPException(status_code=404, detail="Email job not found.")
     return job
+
+
+@app.get("/api/email/report/{gen_job_id}")
+async def get_email_report(gen_job_id: str):
+    report_file = OUTPUT_DIR / gen_job_id / "email_report.json"
+    data = load_persisted_email_report(report_file)
+    if not data:
+        raise HTTPException(status_code=404, detail="No email report found for this job.")
+    return data
+
+
+@app.get("/api/email/report/{gen_job_id}/csv")
+async def download_email_csv_report(gen_job_id: str):
+    report_file = OUTPUT_DIR / gen_job_id / "email_report.json"
+    data = load_persisted_email_report(report_file)
+    if not data or not data.get("logs"):
+        raise HTTPException(status_code=404, detail="No delivery logs found to export.")
+    csv_text = generate_email_csv_report(data["logs"])
+    return Response(
+        content=csv_text,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="delivery_report_{gen_job_id}.csv"'},
+    )
 
 
 @app.post("/api/email/cancel/{job_id}")

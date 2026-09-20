@@ -1,7 +1,10 @@
+import csv
 import email
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import io
+import json
 import logging
 from pathlib import Path
 import re
@@ -109,6 +112,63 @@ def send_single_email(
     server.send_message(msg)
 
 
+def _connect_smtp(
+    host: str,
+    port: int,
+    use_ssl: bool,
+    use_tls: bool,
+    username: str,
+    password: str,
+    timeout: int = 20,
+):
+    if use_ssl:
+        context = ssl.create_default_context()
+        s = smtplib.SMTP_SSL(host, port, context=context, timeout=timeout)
+    else:
+        s = smtplib.SMTP(host, port, timeout=timeout)
+        s.ehlo()
+        if use_tls:
+            context = ssl.create_default_context()
+            s.starttls(context=context)
+            s.ehlo()
+
+    if username and password:
+        s.login(username, password)
+    return s
+
+
+def _save_report(job: Dict[str, Any], report_file: Optional[Path]):
+    if not report_file:
+        return
+    try:
+        report_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(report_file, "w", encoding="utf-8") as f:
+            json.dump({
+                "id": job["id"],
+                "status": job["status"],
+                "total": job["total"],
+                "processed": job["processed"],
+                "succeeded": job["succeeded"],
+                "failed": job["failed"],
+                "cancelled": job.get("cancelled", False),
+                "test_mode": job.get("test_mode", False),
+                "test_email": job.get("test_email", ""),
+                "logs": job.get("logs", []),
+                "updated_at": time.time(),
+            }, f, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to save email report to disk: {e}")
+
+
+def _update_or_append_log(logs: List[Dict[str, Any]], entry: Dict[str, Any]):
+    entry_idx = entry.get("index")
+    for i, item in enumerate(logs):
+        if item.get("index") == entry_idx:
+            logs[i] = entry
+            return
+    logs.append(entry)
+
+
 def run_email_batch_worker(
     job_id: str,
     smtp_config: Dict[str, Any],
@@ -120,13 +180,17 @@ def run_email_batch_worker(
     test_mode: bool = False,
     test_email: str = "",
     delay_seconds: float = 1.2,
+    target_indices: Optional[List[int]] = None,
+    report_file: Optional[Path] = None,
 ) -> None:
     """
-    Background worker thread to dispatch bulk emails with throttling and Test Mode support.
+    Background worker thread to dispatch bulk emails with throttling,
+    transient retry, selective index processing (resume/retry), and disk persistence.
     """
     job = EMAIL_JOBS[job_id]
     job["status"] = "running"
     job["start_time"] = time.time()
+    _save_report(job, report_file)
 
     host = smtp_config.get("host", "").strip()
     port = int(smtp_config.get("port", 587))
@@ -144,27 +208,22 @@ def run_email_batch_worker(
         if "row_index" in f and isinstance(f["row_index"], int):
             file_map[f["row_index"] - 1] = p
 
+    # Determine which rows to process
+    if target_indices is not None:
+        indices_to_send = [i for i in target_indices if 0 <= i < len(rows)]
+    else:
+        indices_to_send = list(range(len(rows)))
+
     server = None
     try:
-        if use_ssl:
-            context = ssl.create_default_context()
-            server = smtplib.SMTP_SSL(host, port, context=context, timeout=20)
-        else:
-            server = smtplib.SMTP(host, port, timeout=20)
-            server.ehlo()
-            if use_tls:
-                context = ssl.create_default_context()
-                server.starttls(context=context)
-                server.ehlo()
+        server = _connect_smtp(host, port, use_ssl, use_tls, username, password)
 
-        if username and password:
-            server.login(username, password)
-
-        for idx, row in enumerate(rows):
+        for step_i, idx in enumerate(indices_to_send):
             if job.get("cancelled", False):
                 job["status"] = "cancelled"
                 break
 
+            row = rows[idx]
             actual_recipient = str(row.get(email_column, "")).strip()
 
             if test_mode:
@@ -175,16 +234,18 @@ def run_email_batch_worker(
                 subject_prefix = ""
 
             if not target_email or "@" not in target_email:
-                job["processed"] += 1
-                job["failed"] += 1
-                job["logs"].append({
+                log_entry = {
                     "index": idx,
                     "recipient": actual_recipient or f"Row {idx + 1}",
                     "target_email": target_email or "(empty)",
                     "status": "skipped",
                     "error": "Missing or invalid email address",
                     "timestamp": time.strftime("%H:%M:%S"),
-                })
+                }
+                _update_or_append_log(job["logs"], log_entry)
+                job["processed"] = len(job["logs"])
+                job["failed"] = sum(1 for l in job["logs"] if l.get("status") in ("failed", "skipped"))
+                _save_report(job, report_file)
                 continue
 
             resolved_subject = subject_prefix + interpolate_template(subject_template, row)
@@ -192,39 +253,58 @@ def run_email_batch_worker(
             attachment_file = file_map.get(idx)
 
             try:
-                send_single_email(
-                    server=server,
-                    sender_email=sender_email,
-                    sender_name=sender_name,
-                    recipient_email=target_email,
-                    subject=resolved_subject,
-                    body_text=resolved_body,
-                    attachment_path=attachment_file,
-                )
-                job["processed"] += 1
-                job["succeeded"] += 1
-                job["logs"].append({
+                # Attempt send with 1 automatic transient reconnection retry
+                try:
+                    send_single_email(
+                        server=server,
+                        sender_email=sender_email,
+                        sender_name=sender_name,
+                        recipient_email=target_email,
+                        subject=resolved_subject,
+                        body_text=resolved_body,
+                        attachment_path=attachment_file,
+                    )
+                except (smtplib.SMTPServerDisconnected, smtplib.SMTPConnectError, ConnectionResetError, BrokenPipeError, TimeoutError, OSError):
+                    logger.warning("SMTP connection dropped during dispatch. Attempting quick reconnect...")
+                    server = _connect_smtp(host, port, use_ssl, use_tls, username, password)
+                    send_single_email(
+                        server=server,
+                        sender_email=sender_email,
+                        sender_name=sender_name,
+                        recipient_email=target_email,
+                        subject=resolved_subject,
+                        body_text=resolved_body,
+                        attachment_path=attachment_file,
+                    )
+
+                log_entry = {
                     "index": idx,
                     "recipient": actual_recipient or f"Row {idx + 1}",
                     "target_email": target_email,
                     "status": "sent",
                     "error": None,
                     "timestamp": time.strftime("%H:%M:%S"),
-                })
+                }
+                _update_or_append_log(job["logs"], log_entry)
             except Exception as send_err:
                 logger.error(f"Failed to send email to {target_email}: {send_err}")
-                job["processed"] += 1
-                job["failed"] += 1
-                job["logs"].append({
+                log_entry = {
                     "index": idx,
                     "recipient": actual_recipient or f"Row {idx + 1}",
                     "target_email": target_email,
                     "status": "failed",
                     "error": str(send_err),
                     "timestamp": time.strftime("%H:%M:%S"),
-                })
+                }
+                _update_or_append_log(job["logs"], log_entry)
 
-            if delay_seconds > 0 and idx < len(rows) - 1:
+            # Recompute summary counters from canonical logs
+            job["succeeded"] = sum(1 for l in job["logs"] if l.get("status") == "sent")
+            job["failed"] = sum(1 for l in job["logs"] if l.get("status") in ("failed", "skipped"))
+            job["processed"] = len(job["logs"])
+            _save_report(job, report_file)
+
+            if delay_seconds > 0 and step_i < len(indices_to_send) - 1:
                 time.sleep(delay_seconds)
 
         if job["status"] != "cancelled":
@@ -241,6 +321,7 @@ def run_email_batch_worker(
             except Exception:
                 pass
         job["end_time"] = time.time()
+        _save_report(job, report_file)
 
 
 def start_email_job(
@@ -253,23 +334,30 @@ def start_email_job(
     test_mode: bool = False,
     test_email: str = "",
     delay_seconds: float = 1.2,
+    target_indices: Optional[List[int]] = None,
+    existing_logs: Optional[List[Dict[str, Any]]] = None,
+    report_file: Optional[Path] = None,
 ) -> str:
     """
     Initializes an email dispatch job and launches the worker thread.
-    Returns unique job_id.
+    Supports resume and retry of targeted indices.
     """
     job_id = str(uuid.uuid4())[:8]
+    initial_logs = list(existing_logs) if existing_logs else []
+    initial_succeeded = sum(1 for l in initial_logs if l.get("status") == "sent")
+    initial_failed = sum(1 for l in initial_logs if l.get("status") in ("failed", "skipped"))
+
     EMAIL_JOBS[job_id] = {
         "id": job_id,
         "status": "queued",
         "total": len(rows),
-        "processed": 0,
-        "succeeded": 0,
-        "failed": 0,
+        "processed": len(initial_logs),
+        "succeeded": initial_succeeded,
+        "failed": initial_failed,
         "cancelled": False,
         "test_mode": test_mode,
         "test_email": test_email,
-        "logs": [],
+        "logs": initial_logs,
         "created_at": time.time(),
     }
 
@@ -286,6 +374,8 @@ def start_email_job(
             "test_mode": test_mode,
             "test_email": test_email,
             "delay_seconds": delay_seconds,
+            "target_indices": target_indices,
+            "report_file": report_file,
         },
         daemon=True,
     )
@@ -304,3 +394,32 @@ def cancel_email_job(job_id: str) -> bool:
         job["cancelled"] = True
         return True
     return False
+
+
+def load_persisted_email_report(report_path: Path) -> Optional[Dict[str, Any]]:
+    """Loads email delivery logs and stats from disk if available."""
+    if report_path and report_path.exists():
+        try:
+            with open(report_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error reading report {report_path}: {e}")
+    return None
+
+
+def generate_email_csv_report(logs: List[Dict[str, Any]]) -> str:
+    """Generates a downloadable CSV string representing the delivery audit report."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Row Number", "Recipient Name", "Target Email", "Delivery Status", "Timestamp", "Details"])
+    for item in logs:
+        writer.writerow([
+            item.get("index", 0) + 1,
+            item.get("recipient", ""),
+            item.get("target_email", ""),
+            str(item.get("status", "")).upper(),
+            item.get("timestamp", ""),
+            item.get("error") or "Delivered successfully",
+        ])
+    return output.getvalue()
+

@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ===================================================
-echo   DocuNext - Offline Bulk Certificate Generator
+echo   DocuNext - Bulk PDF Stamping & Email Suite
 echo ===================================================
 
 cd /d "%~dp0"

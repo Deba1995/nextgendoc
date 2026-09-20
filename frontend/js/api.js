@@ -145,6 +145,12 @@ export const api = {
     return await res.json();
   },
 
+  async getEmailReport(jobId) {
+    const res = await fetch(`/api/email/report/${encodeURIComponent(jobId)}`);
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
   async cancelEmailJob(jobId) {
     const res = await fetch(`/api/email/cancel/${encodeURIComponent(jobId)}`, {
       method: "POST",

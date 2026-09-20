@@ -1,6 +1,6 @@
 # DocuNext PowerShell Launcher
 Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host "  DocuNext - Offline Bulk Certificate Generator" -ForegroundColor Cyan
+Write-Host "  DocuNext - Bulk PDF Stamping & Email Suite" -ForegroundColor Cyan
 Write-Host "===================================================" -ForegroundColor Cyan
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path

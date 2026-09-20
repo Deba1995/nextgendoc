@@ -126,6 +126,12 @@ const els = {
   emailDelaySelect: document.getElementById("email-delay-select"),
   btnStartEmail: document.getElementById("btn-start-email"),
   btnCancelEmail: document.getElementById("btn-cancel-email"),
+  btnResumeEmail: document.getElementById("btn-resume-email"),
+  btnRetryFailedEmail: document.getElementById("btn-retry-failed-email"),
+  retryFailedCount: document.getElementById("retry-failed-count"),
+  emailResumeBanner: document.getElementById("email-resume-banner"),
+  emailResumeBannerText: document.getElementById("email-resume-banner-text"),
+  btnExportEmailCsv: document.getElementById("btn-export-email-csv"),
   emailProgressSection: document.getElementById("email-progress-section"),
   emailProgressFill: document.getElementById("email-progress-fill"),
   emailProgressPercent: document.getElementById("email-progress-percent"),
@@ -1100,6 +1106,7 @@ function pollJobProgress(jobId) {
 
 function setupCompletedJob(jobId, job) {
   state.activeJobId = jobId;
+  state.jobResults = job;
 
   // Setup ZIP download button
   els.btnDownloadZip.style.display = "inline-flex";
@@ -1208,6 +1215,7 @@ function renderProjectsList(projects) {
 // =============================================================================
 
 let activeTemplateFieldTarget = null; // tracks last focused input (subject or body)
+let currentDeliveryLogs = []; // in-memory delivery audit logs
 
 function initEmailStep() {
   // Preset buttons
@@ -1256,9 +1264,18 @@ function initEmailStep() {
     els.btnSmtpTest.addEventListener("click", handleTestSmtpConnection);
   }
 
-  // Dispatch and Cancel buttons
+  // Dispatch, Resume, Retry, and Cancel buttons
   if (els.btnStartEmail) {
-    els.btnStartEmail.addEventListener("click", startEmailDispatch);
+    els.btnStartEmail.addEventListener("click", () => startEmailDispatch({ mode: "all" }));
+  }
+  if (els.btnResumeEmail) {
+    els.btnResumeEmail.addEventListener("click", () => startEmailDispatch({ mode: "resume" }));
+  }
+  if (els.btnRetryFailedEmail) {
+    els.btnRetryFailedEmail.addEventListener("click", () => startEmailDispatch({ mode: "retry_failed" }));
+  }
+  if (els.btnExportEmailCsv) {
+    els.btnExportEmailCsv.addEventListener("click", exportEmailReportCsv);
   }
   if (els.btnCancelEmail) {
     els.btnCancelEmail.addEventListener("click", cancelEmailDispatch);
@@ -1463,6 +1480,108 @@ function setupEmailView() {
   }
 
   updateTestModeUI();
+  checkAndRestoreEmailReport();
+}
+
+function updateResumeUI(reportData) {
+  if (!reportData) return;
+  const logs = reportData.logs || currentDeliveryLogs || [];
+  const total = reportData.total || state.jobResults?.total_rows || state.data?.total_rows || (state.data?.rows?.length) || (state.data?.preview_rows?.length) || logs.length || 0;
+
+  const sentLogs = logs.filter((l) => l.status === "sent");
+  const failedLogs = logs.filter((l) => l.status === "failed");
+  const sentIndices = new Set(sentLogs.map((l) => l.index));
+  const failedIndices = new Set(failedLogs.map((l) => l.index));
+
+  let pendingCount = 0;
+  for (let i = 0; i < total; i++) {
+    if (!sentIndices.has(i) && !failedIndices.has(i)) {
+      pendingCount++;
+    }
+  }
+
+  // Check if we can resume pending unattempted recipients
+  if (pendingCount > 0 && logs.length > 0) {
+    if (els.btnResumeEmail) {
+      els.btnResumeEmail.style.display = "inline-block";
+      els.btnResumeEmail.textContent = `▶ Resume Remaining (${pendingCount})`;
+    }
+    if (els.emailResumeBanner) {
+      els.emailResumeBanner.style.display = "block";
+      if (els.emailResumeBannerText) {
+        els.emailResumeBannerText.textContent = `Previous dispatch paused with ${pendingCount} recipient(s) remaining. You can safely resume without duplicate emails.`;
+      }
+    }
+  } else {
+    if (els.btnResumeEmail) els.btnResumeEmail.style.display = "none";
+    if (els.emailResumeBanner) els.emailResumeBanner.style.display = "none";
+  }
+
+  // Check if we can retry failed recipients
+  if (failedLogs.length > 0) {
+    if (els.btnRetryFailedEmail) {
+      els.btnRetryFailedEmail.style.display = "inline-block";
+    }
+    if (els.retryFailedCount) {
+      els.retryFailedCount.textContent = failedLogs.length;
+    }
+  } else {
+    if (els.btnRetryFailedEmail) els.btnRetryFailedEmail.style.display = "none";
+  }
+
+  // Show export CSV button whenever logs exist
+  if (els.btnExportEmailCsv) {
+    els.btnExportEmailCsv.style.display = logs.length > 0 ? "inline-block" : "none";
+  }
+}
+
+async function checkAndRestoreEmailReport() {
+  if (!state.activeJobId) {
+    if (els.emailResumeBanner) els.emailResumeBanner.style.display = "none";
+    if (els.btnResumeEmail) els.btnResumeEmail.style.display = "none";
+    if (els.btnRetryFailedEmail) els.btnRetryFailedEmail.style.display = "none";
+    return;
+  }
+
+  let report = null;
+  // 1. Try fetching persisted report from server
+  try {
+    report = await api.getEmailReport(state.activeJobId);
+  } catch (_) {}
+
+  // 2. Fallback to localStorage
+  if (!report || !report.logs || report.logs.length === 0) {
+    try {
+      const stored = localStorage.getItem("docunext_email_report_" + state.activeJobId);
+      if (stored) {
+        report = JSON.parse(stored);
+      }
+    } catch (_) {}
+  }
+
+  if (!report || !report.logs || report.logs.length === 0) {
+    if (els.emailResumeBanner) els.emailResumeBanner.style.display = "none";
+    if (els.btnResumeEmail) els.btnResumeEmail.style.display = "none";
+    if (els.btnRetryFailedEmail) els.btnRetryFailedEmail.style.display = "none";
+    return;
+  }
+
+  currentDeliveryLogs = report.logs || [];
+
+  const total = report.total || state.jobResults?.total_rows || state.data?.total_rows || currentDeliveryLogs.length || 1;
+  const processed = report.processed || currentDeliveryLogs.length;
+  const percent = Math.min(100, Math.round((processed / total) * 100));
+
+  if (els.emailProgressSection) els.emailProgressSection.style.display = "block";
+  if (els.emailProgressFill) els.emailProgressFill.style.width = `${percent}%`;
+  if (els.emailProgressPercent) els.emailProgressPercent.textContent = `${percent}%`;
+  if (els.emailStatProcessed) els.emailStatProcessed.textContent = processed;
+  if (els.emailStatTotal) els.emailStatTotal.textContent = total;
+  if (els.emailStatSuccess) els.emailStatSuccess.textContent = report.succeeded || 0;
+  if (els.emailStatFailed) els.emailStatFailed.textContent = report.failed || 0;
+
+  renderEmailLogs(currentDeliveryLogs);
+  updateResumeUI(report);
 }
 
 function insertEmailToken(tokenStr) {
@@ -1479,7 +1598,7 @@ function insertEmailToken(tokenStr) {
   saveEmailTemplateConfig();
 }
 
-async function startEmailDispatch() {
+async function startEmailDispatch({ mode = "all" } = {}) {
   if (!state.activeJobId) {
     showToast("Please generate certificates in Step 3 first before dispatching emails.", "warning");
     return;
@@ -1500,12 +1619,6 @@ async function startEmailDispatch() {
       if (els.emailTestAddress) els.emailTestAddress.focus();
       return;
     }
-  } else {
-    const rowCount = state.jobResults?.total_rows || state.data?.total_rows || "all";
-    const confirmed = window.confirm(
-      `⚠️ TEST MODE IS TURNED OFF!\n\nYou are about to send REAL emails to ${rowCount} recipient(s) listed in your spreadsheet.\n\nAre you sure you want to proceed with live dispatch?`
-    );
-    if (!confirmed) return;
   }
 
   const emailCol = els.emailColumnSelect?.value || "";
@@ -1514,20 +1627,84 @@ async function startEmailDispatch() {
     return;
   }
 
+  const totalRows = state.jobResults?.total_rows || state.data?.total_rows || (state.data?.rows?.length) || (state.data?.preview_rows?.length) || currentDeliveryLogs.length || 0;
+  const sentIndices = new Set(currentDeliveryLogs.filter((l) => l.status === "sent").map((l) => l.index));
+  const failedIndices = currentDeliveryLogs.filter((l) => l.status === "failed").map((l) => l.index);
+
+  const pendingIndices = [];
+  for (let i = 0; i < totalRows; i++) {
+    if (!sentIndices.has(i) && !failedIndices.includes(i)) {
+      pendingIndices.push(i);
+    }
+  }
+
+  let targetIndices = null;
+  let logsToSend = [];
+
+  if (mode === "resume") {
+    if (pendingIndices.length > 0) {
+      targetIndices = pendingIndices;
+    } else if (failedIndices.length > 0) {
+      targetIndices = failedIndices;
+    } else {
+      showToast("All recipients have already received their certificates!", "info");
+      return;
+    }
+    logsToSend = currentDeliveryLogs;
+
+    if (!isTest) {
+      const confirmed = window.confirm(
+        `⚠️ TEST MODE IS TURNED OFF!\n\nYou are about to send REAL emails to the remaining ${targetIndices.length} recipient(s).\n\nAre you sure you want to proceed with live dispatch?`
+      );
+      if (!confirmed) return;
+    }
+  } else if (mode === "retry_failed") {
+    if (failedIndices.length === 0) {
+      showToast("No failed recipients to retry.", "info");
+      return;
+    }
+    targetIndices = failedIndices;
+    logsToSend = currentDeliveryLogs;
+
+    if (!isTest) {
+      const confirmed = window.confirm(
+        `⚠️ TEST MODE IS TURNED OFF!\n\nYou are about to re-send emails to ${targetIndices.length} failed recipient(s).\n\nAre you sure you want to proceed?`
+      );
+      if (!confirmed) return;
+    }
+  } else {
+    // Fresh run: mode === "all"
+    if (!isTest) {
+      const confirmed = window.confirm(
+        `⚠️ TEST MODE IS TURNED OFF!\n\nYou are about to send REAL emails to ${totalRows || "all"} recipient(s) listed in your spreadsheet.\n\nAre you sure you want to proceed with live dispatch?`
+      );
+      if (!confirmed) return;
+    }
+    currentDeliveryLogs = [];
+    logsToSend = [];
+    targetIndices = null;
+  }
+
   const subject = els.emailSubject?.value.trim() || "Your Certificate";
   const body = els.emailBody?.value.trim() || "";
 
-  // Reset UI
+  // Reset / update UI state
   if (els.btnStartEmail) els.btnStartEmail.disabled = true;
   if (els.btnCancelEmail) els.btnCancelEmail.style.display = "inline-block";
+  if (els.btnResumeEmail) els.btnResumeEmail.style.display = "none";
+  if (els.btnRetryFailedEmail) els.btnRetryFailedEmail.style.display = "none";
+  if (els.emailResumeBanner) els.emailResumeBanner.style.display = "none";
   if (els.emailProgressSection) els.emailProgressSection.style.display = "block";
-  if (els.emailProgressFill) els.emailProgressFill.style.width = "0%";
-  if (els.emailProgressPercent) els.emailProgressPercent.textContent = "0%";
-  if (els.emailStatProcessed) els.emailStatProcessed.textContent = "0";
-  if (els.emailStatTotal) els.emailStatTotal.textContent = "0";
-  if (els.emailStatSuccess) els.emailStatSuccess.textContent = "0";
-  if (els.emailStatFailed) els.emailStatFailed.textContent = "0";
-  if (els.emailLogsBody) els.emailLogsBody.innerHTML = "";
+
+  if (mode === "all") {
+    if (els.emailProgressFill) els.emailProgressFill.style.width = "0%";
+    if (els.emailProgressPercent) els.emailProgressPercent.textContent = "0%";
+    if (els.emailStatProcessed) els.emailStatProcessed.textContent = "0";
+    if (els.emailStatTotal) els.emailStatTotal.textContent = totalRows || "0";
+    if (els.emailStatSuccess) els.emailStatSuccess.textContent = "0";
+    if (els.emailStatFailed) els.emailStatFailed.textContent = "0";
+    if (els.emailLogsBody) els.emailLogsBody.innerHTML = "";
+  }
 
   try {
     const delay = parseFloat(els.emailDelaySelect?.value) || 1.5;
@@ -1541,11 +1718,17 @@ async function startEmailDispatch() {
       test_mode: isTest,
       test_email: testAddress,
       delay_seconds: delay,
+      target_indices: targetIndices,
+      existing_logs: logsToSend,
     };
 
     const res = await api.startEmailBatch(payload);
     state.emailJobId = res.email_job_id;
-    showToast(isTest ? "Test email dispatch started!" : "Bulk email dispatch started!", "info");
+    const countLabel = targetIndices ? targetIndices.length : (totalRows || "");
+    const msg = isTest
+      ? `Test email dispatch started (${countLabel} emails to test address)!`
+      : `Bulk email dispatch started (${countLabel} emails)!`;
+    showToast(msg, "info");
 
     // Begin Polling
     if (state.emailPollTimer) clearInterval(state.emailPollTimer);
@@ -1554,6 +1737,7 @@ async function startEmailDispatch() {
     showToast(`Failed to start email batch: ${err.message}`, "error");
     if (els.btnStartEmail) els.btnStartEmail.disabled = false;
     if (els.btnCancelEmail) els.btnCancelEmail.style.display = "none";
+    updateResumeUI({ logs: currentDeliveryLogs, total: totalRows });
   }
 }
 
@@ -1574,8 +1758,18 @@ async function pollEmailJob() {
     if (els.emailStatSuccess) els.emailStatSuccess.textContent = job.succeeded || 0;
     if (els.emailStatFailed) els.emailStatFailed.textContent = job.failed || 0;
 
-    // Render logs
-    renderEmailLogs(job.logs || []);
+    // Update in-memory delivery audit logs
+    currentDeliveryLogs = job.logs || [];
+
+    // Auto-save to localStorage after every poll update
+    if (state.activeJobId) {
+      try {
+        localStorage.setItem("docunext_email_report_" + state.activeJobId, JSON.stringify(job));
+      } catch (_) {}
+    }
+
+    // Render live logs table
+    renderEmailLogs(currentDeliveryLogs);
 
     if (job.status === "completed" || job.status === "cancelled" || job.status === "failed") {
       clearInterval(state.emailPollTimer);
@@ -1584,10 +1778,17 @@ async function pollEmailJob() {
       if (els.btnStartEmail) els.btnStartEmail.disabled = false;
       if (els.btnCancelEmail) els.btnCancelEmail.style.display = "none";
 
+      updateResumeUI(job);
+
       if (job.status === "completed") {
-        showToast("Bulk email dispatch finished successfully!", "success");
+        const failedCount = (job.logs || []).filter((l) => l.status === "failed").length;
+        if (failedCount === 0) {
+          showToast("Bulk email dispatch finished successfully!", "success");
+        } else {
+          showToast(`Dispatch finished with ${failedCount} failure(s). You can retry failed recipients below.`, "warning");
+        }
       } else if (job.status === "cancelled") {
-        showToast("Bulk email dispatch stopped.", "warning");
+        showToast("Bulk email dispatch stopped. You can resume remaining anytime.", "warning");
       } else if (job.status === "failed") {
         showToast(`Email dispatch failed: ${job.error || "Unknown error"}`, "error");
       }
@@ -1613,7 +1814,7 @@ function renderEmailLogs(logs) {
         : '<span style="background: var(--danger); color: #fff; border: 1.5px solid #000; padding: 2px 6px; font-weight: 800; font-size: 0.72rem;">FAILED</span>';
 
     tr.innerHTML = `
-      <td style="padding: 6px 10px; font-weight: 800;">#${log.index + 1}</td>
+      <td style="padding: 6px 10px; font-weight: 800;">#${(log.index ?? 0) + 1}</td>
       <td style="padding: 6px 10px; font-weight: 700;">${escapeHtml(log.recipient || "-")}</td>
       <td style="padding: 6px 10px; font-family: monospace; font-size: 0.78rem;">${escapeHtml(log.target_email || "-")}</td>
       <td style="padding: 6px 10px;">${statusBadge}</td>
@@ -1622,6 +1823,61 @@ function renderEmailLogs(logs) {
     `;
     els.emailLogsBody.appendChild(tr);
   });
+}
+
+async function exportEmailReportCsv() {
+  if (!state.activeJobId) {
+    showToast("No active certificate job found.", "warning");
+    return;
+  }
+  if (!currentDeliveryLogs || currentDeliveryLogs.length === 0) {
+    showToast("No delivery logs available to export.", "warning");
+    return;
+  }
+
+  // 1. Try direct server download
+  try {
+    const res = await fetch(`/api/email/report/${encodeURIComponent(state.activeJobId)}/csv`);
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `delivery_report_${state.activeJobId}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      showToast("Delivery report CSV downloaded!", "success");
+      return;
+    }
+  } catch (_) {}
+
+  // 2. Client-side fallback if server file is not ready
+  try {
+    const headers = ["Row Number", "Recipient Name", "Target Email", "Delivery Status", "Time", "Error / Details"];
+    const rows = currentDeliveryLogs.map((log) => [
+      (log.index ?? 0) + 1,
+      `"${String(log.recipient || "").replace(/"/g, '""')}"`,
+      `"${String(log.target_email || "").replace(/"/g, '""')}"`,
+      `"${String(log.status || "").toUpperCase()}"`,
+      `"${String(log.timestamp || "")}"`,
+      `"${String(log.error || "Delivered with PDF").replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `delivery_report_${state.activeJobId}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+    showToast("Delivery report CSV downloaded!", "success");
+  } catch (err) {
+    showToast(`Failed to export CSV: ${err.message}`, "error");
+  }
 }
 
 function escapeHtml(str) {

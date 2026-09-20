@@ -1,6 +1,6 @@
-# DocuNext: Local Offline Bulk Certificate Generator
+# DocuNext: Bulk PDF Stamping & Email Suite
 
-**DocuNext** is a self-hosted, 100% offline web application for bulk-generating personalized certificate PDFs from templates and Excel/CSV spreadsheets. It is designed as a private, unlimited alternative to cloud tools like DocuPotion—requiring **no cloud accounts, no API keys, no internet access, and no telemetry**.
+**DocuNext** is a self-hosted, offline-capable web suite for bulk-generating personalized PDF certificates/documents from templates and Excel/CSV spreadsheets, with built-in bulk email dispatch and Test Mode verification.
 
 ---
 
