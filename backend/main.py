@@ -45,6 +45,12 @@ SESSION_TEMPLATES: Dict[str, str] = {}
 SESSION_DATA: Dict[str, Dict[str, Any]] = {}
 
 
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "app": "DocuNext"}
+
+
+
 class AutoMatchRequest(BaseModel):
     template_fields: List[str]
     spreadsheet_headers: List[str]
