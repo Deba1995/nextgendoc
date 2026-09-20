@@ -76,8 +76,8 @@ export class CanvasEditor {
     if (!this.pdfWidth || !this.pdfHeight) return;
 
     const viewport = document.getElementById("canvas-scroll-viewport") || this.container;
-    const availW = Math.max(320, (viewport.clientWidth || 800) - 50);
-    const availH = Math.max(240, (viewport.clientHeight || 550) - 50);
+    const availW = Math.max(160, (viewport.clientWidth || 360) - 24);
+    const availH = Math.max(160, (viewport.clientHeight || 360) - 24);
 
     const scaleW = availW / this.pdfWidth;
     const scaleH = availH / this.pdfHeight;

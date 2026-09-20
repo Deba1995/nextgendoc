@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DocuNext - Local Offline Certificate Generator</title>
+  <title>DocuNext - Certificate Generator</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -16,8 +16,6 @@
       </svg>
       <div class="brand-title">
         DocuNext
-        <span class="brand-tag">⚡ 100% Offline</span>
-        <span class="brand-tag" style="background: var(--neo-pink); color: #fff; display: none;" id="tag-cloud">Zero Cloud</span>
       </div>
     </div>
 
@@ -72,19 +70,6 @@
 
     <!-- STEP 1: UPLOAD & MATCH VIEW -->
     <section id="view-upload" class="view-panel active">
-      <!-- Neobrutalist Banner Stickers -->
-      <div style="display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; width: 100%; margin-bottom: -10px;">
-        <span style="background: var(--neo-yellow); border: 2px solid #000; padding: 4px 12px; font-weight: 900; font-size: 0.75rem; box-shadow: 3px 3px 0 #000; transform: rotate(-1.5deg);">
-          ⚡ STEP 01: LOAD FILES
-        </span>
-        <span style="background: var(--neo-cyan); border: 2px solid #000; padding: 4px 12px; font-weight: 900; font-size: 0.75rem; box-shadow: 3px 3px 0 #000; transform: rotate(1deg);">
-          ★ 100% PRIVATE &bull; RUNS ON YOUR MACHINE
-        </span>
-        <span style="background: var(--neo-green); border: 2px solid #000; padding: 4px 12px; font-weight: 900; font-size: 0.75rem; box-shadow: 3px 3px 0 #000; transform: rotate(-1deg);">
-          ✔ ZERO PER-DOC LIMITS
-        </span>
-      </div>
-
       <div class="upload-grid">
         <!-- PDF Template Card -->
         <div class="upload-card">
@@ -496,7 +481,7 @@
   </main>
 
   <!-- App Footer -->
-  <footer style="padding: 10px 24px; background: #fff; border-top: var(--border-thick); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; z-index: 10;">
+  <footer class="app-footer">
     <div style="display: flex; align-items: center; gap: 8px;">
       <span style="display: inline-block; width: 8px; height: 8px; background: var(--neo-green); border: 1.5px solid #000;"></span>
       <span>DocuNext &bull; Batch Certificate Generator</span>

@@ -197,18 +197,18 @@ def generate_sample_assets(output_dir: Path, row_count: int = 10):
             "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez"
         ]
         courses = [
-            "Advanced Data Science & Machine Learning",
+            "Advanced Web Development & Cloud Computing",
             "Executive Leadership & Strategic Management",
             "Bioinformatics and Genomic Analytics",
             "Cloud Architecture & Cybersecurity",
             "Quantitative Financial Modeling",
             "Full-Stack Distributed Systems Engineering",
-            "Applied Artificial Intelligence Systems",
+            "Software Architecture & Database Systems",
             "Renewable Energy Grid Design",
             "Product Strategy & Human-Computer Interaction",
             "High Performance Computing with Rust & C++",
-            "Biomedical Engineering & Neural Systems",
-            "Autonomous Robotics & Embedded Systems"
+            "Biomedical Engineering & Laboratory Systems",
+            "Mobile Application Development & Architecture"
         ]
         grades = ["Distinction", "High Honors", "Honors", "Distinction", "Merit", "High Honors"]
 
