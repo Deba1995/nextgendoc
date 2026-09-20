@@ -1,19 +1,21 @@
-# Python environment
+# Python virtual environments
 .venv/
-env/
 venv/
 ENV/
+env/
+
+# Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
-# Temporary and local user files
-uploads/
+# Uploads & Outputs
 output/
+uploads/
 test_scratch/
-*.log
+*.zip
 
-# System files
+# OS files
 .DS_Store
 Thumbs.db
-desktop.ini
