@@ -1,9 +1,97 @@
-// API Client for DocuNext Backend
+// API Client for DocuNext Backend with Access Key Authentication
+
+let authToken = localStorage.getItem("docunext_token") || sessionStorage.getItem("docunext_token") || "";
+let onUnauthorizedCallback = null;
+
+export function setUnauthorizedHandler(fn) {
+  onUnauthorizedCallback = fn;
+}
+
+export function getAuthToken() {
+  return authToken || localStorage.getItem("docunext_token") || sessionStorage.getItem("docunext_token") || "";
+}
+
+export function setAuthToken(token, remember = true) {
+  authToken = token || "";
+  if (token) {
+    if (remember) {
+      localStorage.setItem("docunext_token", token);
+    } else {
+      sessionStorage.setItem("docunext_token", token);
+    }
+  } else {
+    localStorage.removeItem("docunext_token");
+    sessionStorage.removeItem("docunext_token");
+  }
+}
+
+export function clearAuthToken() {
+  authToken = "";
+  localStorage.removeItem("docunext_token");
+  sessionStorage.removeItem("docunext_token");
+}
+
+async function authFetch(url, options = {}) {
+  const token = getAuthToken();
+  const headers = new Headers(options.headers || {});
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+    headers.set("X-Access-Token", token);
+  }
+
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    clearAuthToken();
+    if (typeof onUnauthorizedCallback === "function") {
+      onUnauthorizedCallback();
+    }
+  }
+  return res;
+}
+
 export const api = {
+  getAuthToken,
+  setAuthToken,
+  clearAuthToken,
+
+  getDownloadUrl(basePath) {
+    const token = getAuthToken();
+    if (!token) return basePath;
+    const separator = basePath.includes("?") ? "&" : "?";
+    return `${basePath}${separator}token=${encodeURIComponent(token)}`;
+  },
+
+  async getAuthStatus() {
+    const res = await fetch("/api/auth/status");
+    if (!res.ok) return { auth_required: false };
+    return await res.json();
+  },
+
+  async login(accessKey) {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ access_key: accessKey }),
+    });
+    const data = await res.json().catch(() => ({ success: false, detail: "Login request failed" }));
+    if (res.ok && data.token) {
+      setAuthToken(data.token, true);
+    }
+    return { ok: res.ok, status: res.status, ...data };
+  },
+
+  async logout() {
+    clearAuthToken();
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (_) {}
+    return { success: true };
+  },
+
   async uploadTemplate(file) {
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/upload/template", { method: "POST", body: fd });
+    const res = await authFetch("/api/upload/template", { method: "POST", body: fd });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: "Upload failed" }));
       throw new Error(err.detail || "Failed to upload template");
@@ -14,7 +102,7 @@ export const api = {
   async uploadData(file) {
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/upload/data", { method: "POST", body: fd });
+    const res = await authFetch("/api/upload/data", { method: "POST", body: fd });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: "Upload failed" }));
       throw new Error(err.detail || "Failed to upload spreadsheet");
@@ -23,7 +111,7 @@ export const api = {
   },
 
   async autoMatch(templateFields, spreadsheetHeaders) {
-    const res = await fetch("/api/automatch", {
+    const res = await authFetch("/api/automatch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -36,7 +124,7 @@ export const api = {
   },
 
   async fetchPreview(templateId, fields, rowData, pageNum = 0) {
-    const res = await fetch("/api/preview/sample", {
+    const res = await authFetch("/api/preview/sample", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -54,7 +142,7 @@ export const api = {
   },
 
   async saveProject(name, projectData) {
-    const res = await fetch("/api/projects/save", {
+    const res = await authFetch("/api/projects/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, project_data: projectData }),
@@ -64,19 +152,19 @@ export const api = {
   },
 
   async listProjects() {
-    const res = await fetch("/api/projects/list");
+    const res = await authFetch("/api/projects/list");
     if (!res.ok) throw new Error("Failed to list projects");
     return await res.json();
   },
 
   async loadProject(name) {
-    const res = await fetch(`/api/projects/${encodeURIComponent(name)}`);
+    const res = await authFetch(`/api/projects/${encodeURIComponent(name)}`);
     if (!res.ok) throw new Error("Failed to load project");
     return await res.json();
   },
 
   async startGeneration(templateId, dataId, fields, filenamePattern, pageNum = 0, rowStart = 0, rowLimit = null) {
-    const res = await fetch("/api/generate", {
+    const res = await authFetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -97,19 +185,19 @@ export const api = {
   },
 
   async getJobStatus(jobId) {
-    const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/status`);
+    const res = await authFetch(`/api/jobs/${encodeURIComponent(jobId)}/status`);
     if (!res.ok) throw new Error("Failed to fetch job status");
     return await res.json();
   },
 
   async getJobFiles(jobId) {
-    const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/files`);
+    const res = await authFetch(`/api/jobs/${encodeURIComponent(jobId)}/files`);
     if (!res.ok) throw new Error("Failed to fetch generated files");
     return await res.json();
   },
 
   async loadDemoSample(type = "flat", rowCount = 50) {
-    const res = await fetch(`/api/sample/load?sample_type=${encodeURIComponent(type)}&row_count=${rowCount}`, {
+    const res = await authFetch(`/api/sample/load?sample_type=${encodeURIComponent(type)}&row_count=${rowCount}`, {
       method: "POST",
     });
     if (!res.ok) throw new Error("Failed to load sample assets");
@@ -117,7 +205,7 @@ export const api = {
   },
 
   async testSmtp(smtpConfig) {
-    const res = await fetch("/api/email/test-connection", {
+    const res = await authFetch("/api/email/test-connection", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(smtpConfig),
@@ -127,7 +215,7 @@ export const api = {
   },
 
   async startEmailBatch(payload) {
-    const res = await fetch("/api/email/send-batch", {
+    const res = await authFetch("/api/email/send-batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -140,19 +228,19 @@ export const api = {
   },
 
   async getEmailJobStatus(jobId) {
-    const res = await fetch(`/api/email/status/${encodeURIComponent(jobId)}`);
+    const res = await authFetch(`/api/email/status/${encodeURIComponent(jobId)}`);
     if (!res.ok) throw new Error("Failed to fetch email job status");
     return await res.json();
   },
 
   async getEmailReport(jobId) {
-    const res = await fetch(`/api/email/report/${encodeURIComponent(jobId)}`);
+    const res = await authFetch(`/api/email/report/${encodeURIComponent(jobId)}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
   async cancelEmailJob(jobId) {
-    const res = await fetch(`/api/email/cancel/${encodeURIComponent(jobId)}`, {
+    const res = await authFetch(`/api/email/cancel/${encodeURIComponent(jobId)}`, {
       method: "POST",
     });
     if (!res.ok) throw new Error("Failed to cancel email job");

@@ -1,6 +1,6 @@
 // DocuNext Main Application Controller
 import { state } from "./state.js";
-import { api } from "./api.js";
+import { api, setUnauthorizedHandler, setAuthToken, clearAuthToken, getAuthToken } from "./api.js";
 import { CanvasEditor } from "./canvas.js";
 
 // DOM Elements
@@ -146,6 +146,17 @@ const els = {
   modalProjects: document.getElementById("modal-projects"),
   modalProjectsList: document.getElementById("modal-projects-list"),
   btnCloseProjectsModal: document.getElementById("btn-close-projects-modal"),
+
+  // Auth Modal & Badge
+  modalAuth: document.getElementById("modal-auth"),
+  formAuth: document.getElementById("form-auth"),
+  authAccessKey: document.getElementById("auth-access-key"),
+  authErrorBanner: document.getElementById("auth-error-banner"),
+  btnToggleAuthPassword: document.getElementById("btn-toggle-auth-password"),
+  authRememberMe: document.getElementById("auth-remember-me"),
+  btnSubmitAuth: document.getElementById("btn-submit-auth"),
+  headerAuthBadge: document.getElementById("header-auth-badge"),
+  btnAuthLogout: document.getElementById("btn-auth-logout"),
 };
 
 // Initialize Canvas
@@ -154,6 +165,7 @@ let canvasEditor = null;
 function init() {
   canvasEditor = new CanvasEditor(els.canvasContainer, els.canvasStage, els.canvasBgImg);
 
+  initAuth();
   initNavigation();
   initUploadStep();
   initEditorStep();
@@ -1110,7 +1122,7 @@ function setupCompletedJob(jobId, job) {
 
   // Setup ZIP download button
   els.btnDownloadZip.style.display = "inline-flex";
-  els.btnDownloadZip.href = `/api/jobs/${jobId}/download-zip`;
+  els.btnDownloadZip.href = api.getDownloadUrl(`/api/jobs/${jobId}/download-zip`);
 
   // Show Proceed to Step 4 button
   if (els.btnProceedStep4) {
@@ -1127,7 +1139,7 @@ function setupCompletedJob(jobId, job) {
       <td style="padding: 10px 12px; border-bottom: 2px solid #000; border-right: 1px solid #000; font-weight: 700;">${f.filename}</td>
       <td style="padding: 10px 12px; border-bottom: 2px solid #000; border-right: 1px solid #000; font-weight: 600; color: #444;">${kb} KB</td>
       <td style="padding: 10px 12px; border-bottom: 2px solid #000; text-align: right;">
-        <a href="/api/jobs/${jobId}/download/${encodeURIComponent(f.filename)}" class="btn btn-sm btn-neo-yellow" target="_blank">Download</a>
+        <a href="${api.getDownloadUrl(`/api/jobs/${jobId}/download/${encodeURIComponent(f.filename)}`)}" class="btn btn-sm btn-neo-yellow" target="_blank">Download</a>
       </td>
     `;
     els.filesTableBody.appendChild(tr);
@@ -1208,6 +1220,124 @@ function renderProjectsList(projects) {
 
     els.modalProjectsList.appendChild(item);
   });
+}
+
+// =============================================================================
+// AUTHENTICATION & ACCESS RESTRICTION CONTROLLER
+// =============================================================================
+
+let authRequired = false;
+
+async function initAuth() {
+  setUnauthorizedHandler(() => {
+    showAuthModal(true);
+  });
+
+  if (els.btnToggleAuthPassword && els.authAccessKey) {
+    els.btnToggleAuthPassword.addEventListener("click", () => {
+      const type = els.authAccessKey.type === "password" ? "text" : "password";
+      els.authAccessKey.type = type;
+      els.btnToggleAuthPassword.textContent = type === "password" ? "👁️" : "🙈";
+    });
+  }
+
+  if (els.formAuth) {
+    els.formAuth.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const key = els.authAccessKey?.value.trim() || "";
+      if (!key) return;
+
+      if (els.btnSubmitAuth) {
+        els.btnSubmitAuth.disabled = true;
+        els.btnSubmitAuth.textContent = "⏳ Verifying...";
+      }
+      if (els.authErrorBanner) {
+        els.authErrorBanner.style.display = "none";
+      }
+
+      try {
+        const res = await api.login(key);
+        if (res.success) {
+          if (els.authRememberMe && !els.authRememberMe.checked) {
+            setAuthToken(res.token, false);
+          }
+          hideAuthModal();
+          showToast("DocuNext Unlocked!", "success");
+          if (els.headerAuthBadge) els.headerAuthBadge.style.display = "flex";
+        } else {
+          if (els.authErrorBanner) {
+            els.authErrorBanner.textContent = `✖ ${res.detail || "Incorrect access key. Please try again."}`;
+            els.authErrorBanner.style.display = "block";
+          }
+          if (els.authAccessKey) {
+            els.authAccessKey.focus();
+            els.authAccessKey.select();
+          }
+        }
+      } catch (err) {
+        if (els.authErrorBanner) {
+          els.authErrorBanner.textContent = `✖ Login error: ${err.message}`;
+          els.authErrorBanner.style.display = "block";
+        }
+      } finally {
+        if (els.btnSubmitAuth) {
+          els.btnSubmitAuth.disabled = false;
+          els.btnSubmitAuth.textContent = "⚡ Unlock DocuNext";
+        }
+      }
+    });
+  }
+
+  if (els.btnAuthLogout) {
+    els.btnAuthLogout.addEventListener("click", async () => {
+      await api.logout();
+      showAuthModal(false);
+      showToast("Workspace locked.", "info");
+    });
+  }
+
+  // Check auth requirement on startup
+  try {
+    const status = await api.getAuthStatus();
+    authRequired = Boolean(status.auth_required);
+    if (authRequired) {
+      const token = getAuthToken();
+      if (!token) {
+        showAuthModal(false);
+      } else {
+        if (els.headerAuthBadge) els.headerAuthBadge.style.display = "flex";
+      }
+    } else {
+      if (els.headerAuthBadge) els.headerAuthBadge.style.display = "none";
+      hideAuthModal();
+    }
+  } catch (err) {
+    console.error("Auth status check failed:", err);
+  }
+}
+
+function showAuthModal(isSessionExpired = false) {
+  if (!els.modalAuth) return;
+  els.modalAuth.classList.add("active");
+  if (els.authErrorBanner) {
+    if (isSessionExpired) {
+      els.authErrorBanner.textContent = "✖ Session expired or key changed. Please enter Access Key.";
+      els.authErrorBanner.style.display = "block";
+    } else {
+      els.authErrorBanner.style.display = "none";
+    }
+  }
+  if (els.headerAuthBadge) els.headerAuthBadge.style.display = "none";
+  if (els.authAccessKey) {
+    els.authAccessKey.value = "";
+    setTimeout(() => els.authAccessKey.focus(), 100);
+  }
+}
+
+function hideAuthModal() {
+  if (!els.modalAuth) return;
+  els.modalAuth.classList.remove("active");
+  if (els.authErrorBanner) els.authErrorBanner.style.display = "none";
 }
 
 // =============================================================================
@@ -1837,7 +1967,8 @@ async function exportEmailReportCsv() {
 
   // 1. Try direct server download
   try {
-    const res = await fetch(`/api/email/report/${encodeURIComponent(state.activeJobId)}/csv`);
+    const csvUrl = api.getDownloadUrl(`/api/email/report/${encodeURIComponent(state.activeJobId)}/csv`);
+    const res = await fetch(csvUrl);
     if (res.ok) {
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);

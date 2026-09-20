@@ -63,6 +63,15 @@ docker compose up --build
 ```
 Access the app at `http://localhost:8000`.
 
+### Option 4: Restricted Access (Password Protection)
+To protect your DocuNext instance with a secret passcode (e.g. when hosting publicly or on Render):
+- Set an environment variable (in your shell, `.env`, or Render dashboard):
+  ```env
+  APP_ACCESS_KEY="YourSecretPasscode123"
+  ```
+- When `APP_ACCESS_KEY` is configured, DocuNext activates full backend middleware protection and displays a Neobrutalist Passcode Lock screen to visitors.
+- When left blank or unset, the application operates openly (default local/development mode).
+
 ---
 
 ## Out-of-the-Box Demo

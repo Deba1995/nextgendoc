@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DocuNext - Bulk PDF Stamping &amp; Email Suite</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="favicon.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,9 +13,7 @@
   <!-- App Header -->
   <header class="app-header">
     <div class="brand">
-      <svg class="brand-icon" viewBox="0 0 24 24">
-        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm-4 8H7v-2h6v2z"/>
-      </svg>
+      <img src="favicon.png" alt="DocuNext Logo" style="width: 28px; height: 28px; border: 2px solid #000; box-shadow: 2px 2px 0 #000; background: #fff; padding: 2px; object-fit: contain; flex-shrink: 0;">
       <div class="brand-title">DocuNext</div>
       <a href="https://github.com/Deba1995/nextgendoc" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-header-gh" title="View source on GitHub" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; background: #000; color: #fff; font-weight: 800; border: 2px solid #000; box-shadow: 2px 2px 0 #000; padding: 4px 8px; font-size: 0.75rem;">
         <svg style="width: 14px; height: 14px; fill: #fff;" viewBox="0 0 24 24">
@@ -45,6 +45,13 @@
 
     <!-- Header Actions (Consolidated Dropdowns) -->
     <div class="header-actions">
+      <!-- Auth Status / Logout Badge -->
+      <div id="header-auth-badge" style="display: none;">
+        <button type="button" id="btn-auth-logout" class="btn btn-secondary btn-sm" title="Lock workspace & logout" style="font-size: 0.72rem; padding: 4px 8px; font-weight: 800; background: #fff;">
+          🔒 Logout
+        </button>
+      </div>
+
       <!-- Demo Popover Menu -->
       <div class="dropdown-wrapper">
         <button id="btn-toggle-demo-menu" class="btn btn-neo-cyan btn-sm" style="display: flex; align-items: center; gap: 4px;">
@@ -767,10 +774,52 @@ DocuNext Certifications Team</textarea>
     </div>
   </div>
 
+  <!-- Passcode Access Restriction Modal -->
+  <div id="modal-auth" class="modal-overlay" style="z-index: 99999; backdrop-filter: blur(6px); background: rgba(0, 0, 0, 0.75);">
+    <div class="modal-dialog" style="max-width: 440px; text-align: center; padding: 28px 24px;">
+      <div style="display: flex; justify-content: center; margin-bottom: 14px;">
+        <img src="favicon.png" alt="DocuNext Logo" style="width: 52px; height: 52px; border: 3px solid #000; box-shadow: 3px 3px 0 #000; background: #fff; padding: 4px; object-fit: contain;">
+      </div>
+      <h2 style="font-size: 1.45rem; font-weight: 900; text-transform: uppercase; margin-bottom: 6px;">
+        🔒 Restricted Access
+      </h2>
+      <p style="font-size: 0.85rem; font-weight: 700; color: #444; margin-bottom: 18px; line-height: 1.4;">
+        This DocuNext instance is password-protected. Please enter your secret Access Key to continue.
+      </p>
+
+      <form id="form-auth" style="display: flex; flex-direction: column; gap: 14px;">
+        <div id="auth-error-banner" style="display: none; background: var(--danger); color: #fff; border: 2px solid #000; padding: 8px 12px; font-weight: 800; font-size: 0.8rem; box-shadow: 2px 2px 0 #000; text-align: left;">
+          ✖ Incorrect Access Key. Please try again.
+        </div>
+
+        <div class="form-group" style="text-align: left; margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 800;">Access Key / Passcode</label>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" id="auth-access-key" class="text-input" placeholder="Enter secret access key..." style="font-weight: 800; letter-spacing: 2px;" required autocomplete="current-password">
+            <button type="button" id="btn-toggle-auth-password" class="btn btn-secondary btn-sm" style="padding: 0 12px; font-size: 1rem;" title="Toggle show/hide passcode">
+              👁️
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; font-weight: 700;">
+          <label class="checkbox-label" style="margin-bottom: 0;">
+            <input type="checkbox" id="auth-remember-me" checked>
+            <span>Remember on this device</span>
+          </label>
+        </div>
+
+        <button type="submit" id="btn-submit-auth" class="btn btn-neo-green" style="padding: 12px 20px; font-size: 1rem; font-weight: 900; border: var(--border-thick); box-shadow: var(--shadow-hard-lg); text-transform: uppercase; width: 100%;">
+          ⚡ Unlock DocuNext
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Scripts (ES Modules) -->
-  <script type="module" src="js/app.js?v=2.2"></script>
+  <script type="module" src="js/app.js?v=2.3"></script>
 </body>
 </html>

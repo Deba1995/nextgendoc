@@ -19,3 +19,7 @@ test_scratch/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Temp & Secrets
+brag_temp_repo/
+.env

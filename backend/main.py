@@ -6,12 +6,18 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from .auth_service import (
+    create_session_token,
+    get_access_key,
+    is_auth_required,
+    verify_session_token,
+)
 from .data_service import auto_match_headers, parse_spreadsheet
 from .email_service import (
     cancel_email_job,
@@ -48,14 +54,96 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    if not is_auth_required():
+        return await call_next(request)
+
+    path = request.url.path
+    # Public endpoints
+    if (
+        not path.startswith("/api/")
+        or path == "/api/health"
+        or path == "/api/auth/status"
+        or path == "/api/auth/login"
+    ):
+        return await call_next(request)
+
+    token = None
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+    elif request.headers.get("X-Access-Token"):
+        token = request.headers.get("X-Access-Token").strip()
+    elif "docunext_token" in request.cookies:
+        token = request.cookies.get("docunext_token")
+    elif "token" in request.query_params:
+        token = request.query_params.get("token")
+
+    key = get_access_key()
+    if not token or not verify_session_token(token, key):
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Authentication required. Invalid or expired access key."},
+        )
+
+    return await call_next(request)
+
+
 # In-memory store for uploaded sessions
 SESSION_TEMPLATES: Dict[str, str] = {}
 SESSION_DATA: Dict[str, Dict[str, Any]] = {}
 
 
+@app.get("/favicon.ico")
+async def get_favicon():
+    fav = FRONTEND_DIR / "favicon.png"
+    if fav.exists():
+        return FileResponse(fav, media_type="image/png")
+    return Response(status_code=404)
+
+
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "offline": True, "app": "DocuNext"}
+
+
+class LoginRequest(BaseModel):
+    access_key: str
+
+
+@app.get("/api/auth/status")
+async def get_auth_status():
+    return {"auth_required": is_auth_required()}
+
+
+@app.post("/api/auth/login")
+async def auth_login(req: LoginRequest, response: Response):
+    if not is_auth_required():
+        return {"success": True, "auth_required": False, "token": "open"}
+
+    key = get_access_key()
+    if not req.access_key or req.access_key != key:
+        return JSONResponse(
+            status_code=401,
+            content={"success": False, "detail": "Incorrect access key. Please try again."},
+        )
+
+    token = create_session_token(key, ttl_hours=48)
+    response.set_cookie(
+        key="docunext_token",
+        value=token,
+        max_age=48 * 3600,
+        httponly=False,
+        samesite="lax",
+    )
+    return {"success": True, "token": token, "auth_required": True}
+
+
+@app.post("/api/auth/logout")
+async def auth_logout(response: Response):
+    response.delete_cookie("docunext_token")
+    return {"success": True}
 
 
 
