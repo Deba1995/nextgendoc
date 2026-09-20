@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.gitignore
+uploads/
+output/
+test_scratch/
+tests/
+*.md
+run.bat
+run.ps1
+docker-compose.yml
+.DS_Store
+Thumbs.db

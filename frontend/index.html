@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocuNext - Local Offline Certificate Generator</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 24 24">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm-4 8H7v-2h6v2z"/>
+      </svg>
+      <div class="brand-title">
+        DocuNext
+        <span class="brand-tag">⚡ 100% Offline</span>
+        <span class="brand-tag" style="background: var(--neo-pink); color: #fff; display: none;" id="tag-cloud">Zero Cloud</span>
+      </div>
+    </div>
+
+    <!-- Stepper Navigation -->
+    <nav class="stepper-nav">
+      <button class="step-btn active" data-step="1">
+        <span class="step-num">1</span>
+        <span>Upload &amp; Match</span>
+      </button>
+      <button class="step-btn" data-step="2">
+        <span class="step-num">2</span>
+        <span>Layout &amp; Design</span>
+      </button>
+      <button class="step-btn" data-step="3">
+        <span class="step-num">3</span>
+        <span>Generate &amp; Export</span>
+      </button>
+    </nav>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <div style="display: flex; align-items: center; gap: 6px; background: #fff; padding: 2px 6px; border: 2px solid #000; box-shadow: 2px 2px 0 #000;">
+        <span style="font-size: 0.72rem; font-weight: 900; text-transform: uppercase;">DEMO:</span>
+        <select id="demo-row-count" class="select-input" style="width: 90px; padding: 2px 4px; border: 1.5px solid #000; font-size: 0.75rem; box-shadow: none;" title="Rows for sample generator">
+          <option value="10">10 rows</option>
+          <option value="50" selected>50 rows</option>
+          <option value="100">100 rows</option>
+          <option value="250">250 rows</option>
+          <option value="500">500 rows</option>
+        </select>
+        <button id="btn-demo-flat" class="btn btn-neo-cyan btn-sm" title="Load sample flat certificate">
+          &plus; Flat
+        </button>
+        <button id="btn-demo-acro" class="btn btn-neo-pink btn-sm" title="Load sample AcroForm fillable certificate">
+          &plus; AcroForm
+        </button>
+      </div>
+      <button id="btn-load-project" class="btn btn-secondary btn-sm">Load Project</button>
+      <button id="btn-save-project" class="btn btn-neo-yellow btn-sm">Save Project</button>
+      <button id="btn-new-project" class="btn btn-secondary btn-sm" style="color: #000;">&olarr; Reset</button>
+    </div>
+  </header>
+
+  <!-- Main Workspace Area -->
+  <main class="app-workspace">
+
+    <!-- STEP 1: UPLOAD & MATCH VIEW -->
+    <section id="view-upload" class="view-panel active">
+      <!-- Neobrutalist Banner Stickers -->
+      <div style="display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; width: 100%; margin-bottom: -10px;">
+        <span style="background: var(--neo-yellow); border: 2px solid #000; padding: 4px 12px; font-weight: 900; font-size: 0.75rem; box-shadow: 3px 3px 0 #000; transform: rotate(-1.5deg);">
+          ⚡ STEP 01: LOAD FILES
+        </span>
+        <span style="background: var(--neo-cyan); border: 2px solid #000; padding: 4px 12px; font-weight: 900; font-size: 0.75rem; box-shadow: 3px 3px 0 #000; transform: rotate(1deg);">
+          ★ 100% PRIVATE &bull; RUNS ON YOUR MACHINE
+        </span>
+        <span style="background: var(--neo-green); border: 2px solid #000; padding: 4px 12px; font-weight: 900; font-size: 0.75rem; box-shadow: 3px 3px 0 #000; transform: rotate(-1deg);">
+          ✔ ZERO PER-DOC LIMITS
+        </span>
+      </div>
+
+      <div class="upload-grid">
+        <!-- PDF Template Card -->
+        <div class="upload-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg style="width: 22px; height: 22px; fill: #000;" viewBox="0 0 24 24">
+                <path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5z"/>
+              </svg>
+              1. PDF Certificate Template
+            </h2>
+            <span style="font-size: 0.75rem; font-weight: 800; background: var(--neo-yellow); border: 1.5px solid #000; padding: 2px 6px;">FLAT OR ACROFORM</span>
+          </div>
+
+          <div id="tpl-dropzone" class="dropzone">
+            <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+            <p style="font-size: 1rem;"><strong>Click to browse</strong> or drag &amp; drop PDF</p>
+            <p style="font-size: 0.75rem; font-weight: 700; color: #555;">Supports 72 / 150 / 300 DPI vector PDFs</p>
+            <input type="file" id="tpl-file-input" accept=".pdf" style="display: none;">
+          </div>
+
+          <div id="tpl-file-info" class="file-info-badge" style="display: none;">
+            <div>
+              <strong id="tpl-name">template.pdf</strong>
+              <div id="tpl-meta" style="font-size: 0.75rem; color: #000;">800 x 600 pt</div>
+            </div>
+            <span style="background: #000; color: #fff; padding: 2px 8px; font-size: 0.75rem;">&check; READY</span>
+          </div>
+        </div>
+
+        <!-- Spreadsheet Card -->
+        <div class="upload-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg style="width: 22px; height: 22px; fill: #000;" viewBox="0 0 24 24">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-2h2v2zm0-4H7v-2h2v2zm0-4H7V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
+              </svg>
+              2. Spreadsheet Data Source
+            </h2>
+            <span style="font-size: 0.75rem; font-weight: 800; background: var(--neo-green); border: 1.5px solid #000; padding: 2px 6px;">.XLSX, .XLS, .CSV</span>
+          </div>
+
+          <div id="data-dropzone" class="dropzone">
+            <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+            <p style="font-size: 1rem;"><strong>Click to browse</strong> or drag &amp; drop spreadsheet</p>
+            <p style="font-size: 0.75rem; font-weight: 700; color: #555;">First row must contain column headers</p>
+            <input type="file" id="data-file-input" accept=".xlsx,.xls,.csv" style="display: none;">
+          </div>
+
+          <div id="data-file-info" class="file-info-badge" style="display: none;">
+            <div>
+              <strong id="data-name">data.xlsx</strong>
+              <div id="data-meta" style="font-size: 0.75rem; color: #000;">0 rows</div>
+            </div>
+            <span style="background: #000; color: #fff; padding: 2px 8px; font-size: 0.75rem;">&check; READY</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AcroForm Detection & Auto-Mapping Table -->
+      <div id="mapping-container" class="mapping-box" style="display: none;">
+        <div class="card-header">
+          <h3 class="card-title" style="font-size: 1.05rem;">
+            <svg style="width: 20px; height: 20px; fill: #000;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            Detected Fillable AcroForm Fields &amp; Auto-Matches
+          </h3>
+          <span style="font-size: 0.75rem; font-weight: 800; background: var(--neo-yellow); border: 1.5px solid #000; padding: 2px 6px;">CONFIRM PAIRINGS</span>
+        </div>
+        <table class="mapping-table">
+          <thead>
+            <tr>
+              <th style="width: 35%;">PDF Field Name</th>
+              <th style="width: 45%;">Matched Spreadsheet Column</th>
+              <th style="width: 20%;">Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="mapping-table-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Step 1 Footer Action -->
+      <div style="display: flex; justify-content: flex-end; width: 100%; margin-top: 8px;">
+        <button id="btn-proceed-step2" class="btn btn-primary" style="padding: 12px 28px; font-size: 1rem; border: var(--border-thick); box-shadow: var(--shadow-hard-lg);" disabled>
+          Proceed to Layout &amp; Design &rarr;
+        </button>
+      </div>
+    </section>
+
+    <!-- STEP 2: LAYOUT & DESIGN EDITOR -->
+    <section id="view-editor" class="view-panel">
+      <!-- Left Sidebar: Columns & Placed Fields -->
+      <aside class="editor-sidebar-left">
+        <div class="sidebar-section">
+          <div class="sidebar-title">
+            <span>Data Columns</span>
+            <span style="font-size: 0.65rem; background: var(--neo-yellow); border: 1px solid #000; padding: 1px 4px;">DRAG ME</span>
+          </div>
+          <p style="font-size: 0.72rem; color: #444; font-weight: 600;">
+            Drag any column onto the canvas or click to add.
+          </p>
+          <div id="column-chips" class="column-chips-container"></div>
+        </div>
+
+        <div class="sidebar-section" style="flex: 1; border-bottom: none; overflow: hidden; display: flex; flex-direction: column;">
+          <div class="sidebar-title">
+            <span>Placed Fields</span>
+            <div style="display: flex; gap: 4px; align-items: center;">
+              <button id="btn-clear-fields" class="btn btn-sm btn-danger" style="font-size: 0.65rem; padding: 2px 6px;" title="Clear all placed fields from canvas">
+                &times; Clear All
+              </button>
+            </div>
+          </div>
+          <div id="placed-fields-list" class="placed-fields-list"></div>
+        </div>
+      </aside>
+
+      <!-- Center: Canvas Stage & Viewport -->
+      <div id="canvas-container" class="canvas-container">
+        <!-- Canvas Toolbar -->
+        <div class="canvas-toolbar">
+          <div class="toolbar-group">
+            <button id="btn-zoom-out" class="zoom-btn" title="Zoom Out">&minus;</button>
+            <select id="zoom-select" class="select-input" style="width: 135px; padding: 3px 6px;">
+              <option value="fit" selected>Fit to Window</option>
+              <option value="0.30">30%</option>
+              <option value="0.40">40%</option>
+              <option value="0.50">50%</option>
+              <option value="0.60">60%</option>
+              <option value="0.75">75%</option>
+              <option value="0.90">90%</option>
+              <option value="1.0">100%</option>
+              <option value="1.25">125%</option>
+              <option value="1.50">150%</option>
+              <option value="2.0">200%</option>
+            </select>
+            <button id="btn-zoom-in" class="zoom-btn" title="Zoom In">&plus;</button>
+            <button id="btn-zoom-fit" class="btn btn-secondary btn-sm" title="Fit Entire Certificate on Screen">Fit</button>
+          </div>
+
+          <!-- Row Preview Navigator -->
+          <div class="toolbar-group" style="background: #FAF7F0; border: 2px solid #000; padding: 2px 6px; box-shadow: 2px 2px 0 #000;">
+            <button id="btn-prev-row" class="btn btn-secondary btn-sm" disabled>&larr;</button>
+            <span id="preview-row-label" style="font-size: 0.8rem; font-weight: 900; min-width: 90px; text-align: center;">Row 1 of 1</span>
+            <button id="btn-next-row" class="btn btn-secondary btn-sm" disabled>&rarr;</button>
+          </div>
+
+          <div class="toolbar-group">
+            <button id="btn-wysiwyg-toggle" class="btn btn-secondary btn-sm" title="Optional: Renders 1 sample PDF on the backend to preview exact print output (not required to proceed)">
+              <svg style="width: 14px; height: 14px; fill: currentColor;" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+              Sample Print Preview
+            </button>
+            <button id="btn-proceed-step3" class="btn btn-neo-pink btn-sm">
+              Next: Generate &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Stage Viewport -->
+        <div class="canvas-scroll-viewport" id="canvas-scroll-viewport">
+          <div id="canvas-stage" class="canvas-stage">
+            <img id="canvas-bg-img" class="canvas-bg-img" alt="PDF Template">
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar: Property Inspector -->
+      <aside class="editor-sidebar-right">
+        <div class="sidebar-title" style="background: var(--neo-yellow); border: 2px solid #000; padding: 6px 10px; margin-bottom: 12px; box-shadow: 2px 2px 0 #000;">
+          <span>Field Inspector</span>
+          <span>&#9998;</span>
+        </div>
+
+        <div id="inspector-card" style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- Field Name -->
+          <div class="form-group">
+            <label class="form-label">Field Label</label>
+            <input type="text" id="prop-field-name" class="text-input" placeholder="e.g. Recipient Name">
+          </div>
+
+          <!-- Column Binding / Custom Placeholder -->
+          <div class="form-group">
+            <label class="form-label">Data Column</label>
+            <select id="prop-column-binding" class="select-input"></select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Text Template / Placeholder</label>
+            <input type="text" id="prop-template-text" class="text-input" placeholder="{{Column}}">
+            <span style="font-size: 0.72rem; font-weight: 700; color: #555;">Combine e.g. {{First}} {{Last}}</span>
+          </div>
+
+          <hr style="border: none; border-top: 2px solid #000;">
+
+          <!-- Typography -->
+          <div class="form-group">
+            <label class="form-label">Font Family</label>
+            <select id="prop-font-family" class="select-input">
+              <option value="sans-serif">Helvetica / Arial (Modern Sans)</option>
+              <option value="serif">Times-Roman / Georgia (Classic Serif)</option>
+              <option value="cursive">Brush Script / Cursive (Calligraphy)</option>
+              <option value="display">Georgia / Playfair (Bold Serif)</option>
+              <option value="monospace">Courier New (Monospace / ID)</option>
+            </select>
+          </div>
+
+          <!-- Font Size & Auto-Shrink -->
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label class="form-label">Font Size</label>
+              <div class="font-size-stepper">
+                <button type="button" id="btn-font-dec" class="zoom-btn" style="width: 24px; height: 24px; font-size: 0.85rem;" title="Decrease font size">&minus;</button>
+                <input type="number" id="prop-font-size" class="text-input" style="width: 55px; padding: 2px 4px; text-align: center;" min="6" max="120" value="22">
+                <button type="button" id="btn-font-inc" class="zoom-btn" style="width: 24px; height: 24px; font-size: 0.85rem;" title="Increase font size">&plus;</button>
+              </div>
+            </div>
+            <input type="range" id="prop-font-size-slider" min="8" max="96" value="22" style="width: 100%; cursor: pointer; accent-color: #000; margin-top: 4px;">
+            <div class="font-presets" id="font-presets">
+              <button type="button" class="font-preset-btn" data-size="12">12</button>
+              <button type="button" class="font-preset-btn" data-size="14">14</button>
+              <button type="button" class="font-preset-btn" data-size="16">16</button>
+              <button type="button" class="font-preset-btn" data-size="18">18</button>
+              <button type="button" class="font-preset-btn" data-size="22">22</button>
+              <button type="button" class="font-preset-btn" data-size="28">28</button>
+              <button type="button" class="font-preset-btn" data-size="36">36</button>
+              <button type="button" class="font-preset-btn" data-size="48">48</button>
+              <button type="button" class="font-preset-btn" data-size="64">64</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="prop-auto-shrink" checked>
+              <span>Auto-shrink font if text overflows box</span>
+            </label>
+          </div>
+
+          <!-- Styles & Alignment -->
+          <div class="input-row">
+            <div class="form-group">
+              <label class="form-label">Style</label>
+              <div class="btn-group">
+                <button id="prop-btn-bold" class="btn-group-item" title="Bold"><strong>B</strong></button>
+                <button id="prop-btn-italic" class="btn-group-item" title="Italic"><em>I</em></button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Alignment</label>
+              <div class="btn-group">
+                <button class="btn-group-item" data-align="left" title="Left">&#8676;</button>
+                <button class="btn-group-item active" data-align="center" title="Center">&#8644;</button>
+                <button class="btn-group-item" data-align="right" title="Right">&#8677;</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Color -->
+          <div class="form-group">
+            <label class="form-label">Text Color</label>
+            <div class="color-picker-wrapper">
+              <input type="color" id="prop-color" class="color-input" value="#000000">
+              <input type="text" id="prop-color-hex" class="text-input" style="flex: 1; text-transform: uppercase;" value="#000000">
+            </div>
+            <div class="color-swatches" id="color-swatches">
+              <button type="button" class="color-swatch-btn" data-color="#000000" style="background: #000000;" title="Black"></button>
+              <button type="button" class="color-swatch-btn" data-color="#1E3A8A" style="background: #1E3A8A;" title="Navy Blue"></button>
+              <button type="button" class="color-swatch-btn" data-color="#2563EB" style="background: #2563EB;" title="Royal Blue"></button>
+              <button type="button" class="color-swatch-btn" data-color="#B45309" style="background: #B45309;" title="Gold / Amber"></button>
+              <button type="button" class="color-swatch-btn" data-color="#065F46" style="background: #065F46;" title="Forest Green"></button>
+              <button type="button" class="color-swatch-btn" data-color="#991B1B" style="background: #991B1B;" title="Crimson Red"></button>
+              <button type="button" class="color-swatch-btn" data-color="#374151" style="background: #374151;" title="Charcoal"></button>
+              <button type="button" class="color-swatch-btn" data-color="#FFFFFF" style="background: #FFFFFF;" title="White"></button>
+            </div>
+          </div>
+
+          <hr style="border: none; border-top: 2px solid #000; margin-top: 6px;">
+
+          <!-- Action Buttons -->
+          <div style="display: flex; gap: 8px;">
+            <button id="btn-duplicate-field" class="btn btn-secondary btn-sm" style="flex: 1;">Duplicate</button>
+            <button id="btn-delete-field" class="btn btn-danger btn-sm" style="flex: 1;">Delete</button>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- STEP 3: GENERATE & EXPORT VIEW -->
+    <section id="view-generate" class="view-panel">
+      <!-- Config Card -->
+      <div class="config-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <svg style="width: 24px; height: 24px; fill: #000;" viewBox="0 0 24 24"><path d="M19 12h-2v3h-3v2h3v3h2v-3h3v-2h-3v-3zm-4 7H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2v8.1c-.65-.07-1.32-.1-2-.1-1.37 0-2.67.37-3.8 1H7v2h6.1c-.07.33-.1.66-.1 1 0 1.08.31 2.09.84 2.96L15 19z"/></svg>
+            Batch Generation Setup
+          </h2>
+          <span style="font-size: 0.75rem; font-weight: 800; background: var(--neo-green); border: 1.5px solid #000; padding: 2px 6px;">EXPORT ENGINE</span>
+        </div>
+
+        <!-- Filename Pattern -->
+        <div class="form-group">
+          <label class="form-label">Output Filename Pattern</label>
+          <input type="text" id="filename-pattern" class="text-input" placeholder="{Recipient Name}_{Course Title}.pdf">
+          <div class="chips-suggestions" id="filename-tags"></div>
+          <div style="font-size: 0.8rem; font-weight: 700; color: #222; margin-top: 6px;">
+            Filename Preview: <strong id="filename-preview" style="background: var(--neo-yellow); border: 1px solid #000; padding: 1px 6px;">Certificate_1.pdf</strong>
+          </div>
+        </div>
+
+        <!-- Generation Row Scope Selection -->
+        <div class="form-group" style="border-top: 2px solid #000; padding-top: 14px;">
+          <label class="form-label">How Many to Generate</label>
+          <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 0.85rem; margin-top: 4px;">
+            <label class="checkbox-label" style="background: #FAF7F0; border: 2px solid #000; padding: 6px 12px; box-shadow: 2px 2px 0 #000;">
+              <input type="radio" name="gen-scope" value="all" checked id="gen-scope-all">
+              <span>All Rows (<strong id="gen-scope-all-count" style="color: #000;">0</strong>)</span>
+            </label>
+
+            <label class="checkbox-label" style="background: #FAF7F0; border: 2px solid #000; padding: 6px 12px; box-shadow: 2px 2px 0 #000;">
+              <input type="radio" name="gen-scope" value="limit" id="gen-scope-limit">
+              <span>First</span>
+              <input type="number" id="gen-limit-count" class="text-input" style="width: 75px; padding: 2px 6px; text-align: center; border: 1.5px solid #000; box-shadow: none;" value="10" min="1">
+              <span>rows</span>
+            </label>
+
+            <label class="checkbox-label" style="background: #FAF7F0; border: 2px solid #000; padding: 6px 12px; box-shadow: 2px 2px 0 #000;">
+              <input type="radio" name="gen-scope" value="range" id="gen-scope-range">
+              <span>Rows</span>
+              <input type="number" id="gen-range-start" class="text-input" style="width: 60px; padding: 2px 6px; text-align: center; border: 1.5px solid #000; box-shadow: none;" value="1" min="1">
+              <span>to</span>
+              <input type="number" id="gen-range-end" class="text-input" style="width: 60px; padding: 2px 6px; text-align: center; border: 1.5px solid #000; box-shadow: none;" value="10" min="1">
+            </label>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 2px solid #000; padding-top: 16px;">
+          <div>
+            <div style="font-size: 0.95rem; font-weight: 900; text-transform: uppercase;">Target Output:</div>
+            <div style="font-size: 0.8rem; font-weight: 600; color: #444;">Saved locally to <code>output/&lt;job_id&gt;/</code> folder + instant ZIP download</div>
+          </div>
+
+          <button id="btn-start-generate" class="btn btn-primary" style="padding: 12px 28px; font-size: 1rem; border: var(--border-thick); box-shadow: var(--shadow-hard-lg);">
+            Generate <span id="generate-row-count">0 certificates</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress & Results Box -->
+      <div id="progress-section" class="progress-box" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 1.1rem; font-weight: 900; text-transform: uppercase;">Generation Progress</h3>
+          <span id="progress-percent" style="font-size: 1.3rem; font-weight: 900; background: var(--neo-yellow); border: 2px solid #000; padding: 2px 8px; box-shadow: 2px 2px 0 #000;">0%</span>
+        </div>
+
+        <div class="progress-bar-track">
+          <div id="progress-fill" class="progress-bar-fill"></div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-box">
+            <div id="stat-processed" class="stat-val">0</div>
+            <div class="stat-label">Processed</div>
+          </div>
+          <div class="stat-box">
+            <div id="stat-total" class="stat-val">0</div>
+            <div class="stat-label">Total Rows</div>
+          </div>
+          <div class="stat-box">
+            <div id="stat-warnings" class="stat-val" style="color: var(--neo-orange);">0</div>
+            <div class="stat-label">Warnings</div>
+          </div>
+          <div class="stat-box">
+            <div id="stat-failed" class="stat-val" style="color: var(--danger);">0</div>
+            <div class="stat-label">Failed</div>
+          </div>
+        </div>
+
+        <!-- Warnings display -->
+        <div id="warnings-box" class="warnings-box" style="display: none;">
+          <strong>Generation Warnings (non-fatal):</strong>
+          <ul id="warnings-list" style="margin-top: 6px; padding-left: 20px;"></ul>
+        </div>
+
+        <!-- Download All ZIP button -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+          <div style="font-size: 0.85rem; font-weight: 700; color: #444;">
+            Files are saved to your local disk in <code>docunext/output/</code>.
+          </div>
+          <a id="btn-download-zip" href="#" class="btn btn-neo-green" style="display: none; padding: 10px 22px; font-size: 0.95rem; border: var(--border-thick); box-shadow: var(--shadow-hard);">
+            <svg style="width: 18px; height: 18px; fill: currentColor;" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Download All as ZIP
+          </a>
+        </div>
+
+        <!-- Generated Files Table -->
+        <div class="files-table-container">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+            <thead>
+              <tr style="background-color: var(--neo-yellow); border-bottom: 2px solid #000; color: #000; text-align: left; font-weight: 900; text-transform: uppercase;">
+                <th style="padding: 8px 12px; border-right: 1px solid #000;">Generated File</th>
+                <th style="padding: 8px 12px; border-right: 1px solid #000;">Size</th>
+                <th style="padding: 8px 12px; text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="files-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Load Project Modal -->
+  <div id="modal-projects" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="card-header" style="background: var(--neo-yellow); margin: -24px -24px 12px -24px; padding: 14px 20px; border-bottom: var(--border-thick);">
+        <h3 class="card-title">Saved Projects</h3>
+        <button id="btn-close-projects-modal" class="btn btn-sm btn-danger">&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; font-weight: 700; color: #333;">Select a saved layout to reload positions and bindings:</p>
+      <div id="modal-projects-list" style="max-height: 280px; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts (ES Modules) -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

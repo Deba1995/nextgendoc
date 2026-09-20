@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  docunext:
+    build: .
+    container_name: docunext_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/app/output
+      - ./projects:/app/projects
+      - ./uploads:/app/uploads
+    restart: unless-stopped

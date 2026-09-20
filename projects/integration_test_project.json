@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "filename_pattern": "{Recipient Name}_{Certificate ID}.pdf",
+  "fields": [
+    {
+      "id": "f_test1",
+      "name": "Recipient Name",
+      "binding": "{{Recipient Name}}",
+      "x": 0.15,
+      "y": 0.38,
+      "width": 0.7,
+      "height": 0.08,
+      "font_family": "serif",
+      "font_size": 26,
+      "auto_shrink": true,
+      "bold": true,
+      "color": "#1E3A8A",
+      "align": "center"
+    }
+  ]
+}

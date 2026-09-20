@@ -1,0 +1,19 @@
+# Python environment
+.venv/
+env/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary and local user files
+uploads/
+output/
+test_scratch/
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
