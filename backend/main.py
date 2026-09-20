@@ -47,7 +47,8 @@ SESSION_DATA: Dict[str, Dict[str, Any]] = {}
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "app": "DocuNext"}
+    return {"status": "ok", "offline": True, "app": "DocuNext"}
+
 
 
 
